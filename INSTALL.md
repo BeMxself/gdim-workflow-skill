@@ -2,19 +2,19 @@
 
 ## 快速安装（推荐）
 
-### 方式 1：从本地路径安装
+在 Claude Code 中把本仓库添加为插件市场（Marketplace）：
 
-```bash
-claude plugin add /path/to/gdim-workflow
+```text
+/plugin marketplace add BeMxself/gdim-workflow-skill
 ```
 
-### 方式 2：从 Git 仓库安装
+然后安装插件：
 
-```bash
-claude plugin add https://github.com/songmingxu/gdim-workflow.git
+```text
+/plugin install gdim-workflow@BeMxself-gdim-workflow-skill
 ```
 
-安装后重启 Claude Code，所有 `/gdim-*` 命令即可使用。
+安装后，所有 `/gdim-*` 命令即可使用。
 
 ## 验证安装
 
@@ -71,15 +71,11 @@ gdim-workflow/
 
 ## 更新
 
-```bash
-claude plugin update gdim-workflow
-```
+在 Claude Code 输入 `/plugin`，在已安装插件列表中选择 `gdim-workflow` 进行更新。
 
 ## 卸载
 
-```bash
-claude plugin remove gdim-workflow
-```
+在 Claude Code 输入 `/plugin`，在已安装插件列表中卸载 `gdim-workflow`。
 
 重启 Claude Code 即可。
 

@@ -7,7 +7,7 @@
 - 重构为 Claude Code Plugin 格式
 - 添加 `.claude-plugin/plugin.json` 元数据
 - Skills 移至 `skills/` 目录（符合 plugin 标准结构）
-- 支持 `claude plugin add` 安装方式
+- 支持通过 Claude Code `/plugin marketplace add` + `/plugin install` 安装
 - 添加 MIT LICENSE
 - 更新 INSTALL.md 为 plugin 安装指南
 - 更新 README.md 为 plugin 说明

@@ -4,17 +4,19 @@ A Claude Code plugin for the **Gap-Driven Iteration Model (GDIM)** — a discipl
 
 ## Installation
 
-```bash
-claude plugin add /path/to/gdim-workflow
+Install in Claude Code by adding this GitHub repo as a plugin marketplace:
+
+```text
+/plugin marketplace add BeMxself/gdim-workflow-skill
 ```
 
-Or from a git repository:
+Then install the plugin:
 
-```bash
-claude plugin add https://github.com/songmingxu/gdim-workflow.git
+```text
+/plugin install gdim-workflow@BeMxself-gdim-workflow-skill
 ```
 
-After installation, restart Claude Code. All `/gdim-*` commands will be available.
+After installation, all `/gdim-*` commands will be available.
 
 ## Relationship to GDIM Specification
 
