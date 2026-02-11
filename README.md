@@ -1,5 +1,7 @@
 # GDIM Workflow — Claude Code Plugin
 
+[English](README.md) | [中文](README.zh-CN.md)
+
 A Claude Code plugin for the **Gap-Driven Iteration Model (GDIM)** — a disciplined workflow for AI-assisted software development.
 
 ## Installation
@@ -23,16 +25,16 @@ After installation, all `/gdim-*` commands will be available.
 These skills are **executable companions** to the GDIM specification documents (included in `docs/` subdirectory):
 
 - **Skills** (`skills/`): Quick-reference rules for active workflows, optimized for Claude Code
-- **Specification** (`docs/GDIM 规范.md`): Complete methodology, templates, and rationale
-- **Quick Guide** (`docs/GDIM 实践快速指南.md`): Human-readable introduction
-- **Prompt Templates** (`docs/GDIM 提示词模版.md`): Detailed prompts for each stage
-- **Frontend Templates** (`docs/GDIM 提示词模版（前端版）.md`): Frontend-specific constraints
+- **Specification** ([`docs/GDIM 规范.md`](docs/GDIM%20规范.md)): Complete methodology, templates, and rationale
+- **Quick Guide** ([`docs/GDIM 实践快速指南.md`](docs/GDIM%20实践快速指南.md)): Human-readable introduction
+- **Prompt Templates** ([`docs/GDIM 提示词模版.md`](docs/GDIM%20提示词模版.md)): Detailed prompts for each stage
+- **Frontend Templates** ([`docs/GDIM 提示词模版（前端版）.md`](docs/GDIM%20提示词模版（前端版）.md)): Frontend-specific constraints
 
 **When to use what:**
 - Working in Claude Code → Use these skills (`/gdim-*` commands)
-- Learning GDIM → Read `docs/GDIM 实践快速指南.md`
-- Need detailed templates → Reference `docs/GDIM 规范.md` or `docs/GDIM 提示词模版.md`
-- Frontend projects → Also see `docs/GDIM 提示词模版（前端版）.md`
+- Learning GDIM → Read [`docs/GDIM 实践快速指南.md`](docs/GDIM%20实践快速指南.md)
+- Need detailed templates → Reference [`docs/GDIM 规范.md`](docs/GDIM%20规范.md) or [`docs/GDIM 提示词模版.md`](docs/GDIM%20提示词模版.md)
+- Frontend projects → Also see [`docs/GDIM 提示词模版（前端版）.md`](docs/GDIM%20提示词模版（前端版）.md)
 
 ## What is GDIM?
 
@@ -198,10 +200,10 @@ These skills are designed to be iteratively improved:
 
 ## References
 
-- Full GDIM specification: `docs/GDIM 规范.md`
-- Quick reference guide: `docs/GDIM 实践快速指南.md`
-- Prompt templates: `docs/GDIM 提示词模版.md`
-- Frontend-specific: `docs/GDIM 提示词模版（前端版）.md`
+- Full GDIM specification: [`docs/GDIM 规范.md`](docs/GDIM%20规范.md)
+- Quick reference guide: [`docs/GDIM 实践快速指南.md`](docs/GDIM%20实践快速指南.md)
+- Prompt templates: [`docs/GDIM 提示词模版.md`](docs/GDIM%20提示词模版.md)
+- Frontend-specific: [`docs/GDIM 提示词模版（前端版）.md`](docs/GDIM%20提示词模版（前端版）.md)
 
 ## Version
 
