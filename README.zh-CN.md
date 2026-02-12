@@ -6,6 +6,8 @@
 
 ## 安装
 
+### Claude Code（插件）
+
 在 Claude Code 中把本 GitHub 仓库添加为插件市场（Marketplace）：
 
 ```text
@@ -19,6 +21,47 @@
 ```
 
 安装完成后，所有 `/gdim-*` 命令即可使用。
+
+### Codex CLI（Skills）
+
+Codex CLI 会从 Codex Home 目录（通常是 `~/.codex/skills/`）发现 skills。安装方式：
+
+```bash
+mkdir -p ~/.codex/skills
+rsync -a skills/ ~/.codex/skills/
+```
+
+后续更新同样重复执行上述 `rsync` 命令即可。
+
+### Kiro CLI（Skills）
+
+Kiro CLI 可以从 `.kiro/skills/**/SKILL.md`（workspace 级别）加载 skills，并通过 agent profile 使用。
+
+1) 将 skills 安装到当前仓库/workspace：
+
+```bash
+mkdir -p .kiro/skills
+rsync -a skills/ .kiro/skills/
+```
+
+2) 创建一个包含 skills resources 的 agent（此命令会打开编辑器）：
+
+```bash
+mkdir -p .kiro/agents
+kiro-cli agent create --name "GDIM Agent" --directory .kiro/agents
+```
+
+3) 在 `.kiro/agents/gdim_agent.json` 中加入 resources 配置（示例）：
+
+```json
+{ "resources": ["skill://.kiro/skills/**/SKILL.md"] }
+```
+
+4) 用该 agent 启动对话：
+
+```bash
+kiro-cli chat --agent "GDIM Agent"
+```
 
 ## 与 GDIM 规范的关系
 

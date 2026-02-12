@@ -6,6 +6,8 @@ A Claude Code plugin for the **Gap-Driven Iteration Model (GDIM)** — a discipl
 
 ## Installation
 
+### Claude Code (Plugin)
+
 Install in Claude Code by adding this GitHub repo as a plugin marketplace:
 
 ```text
@@ -19,6 +21,47 @@ Then install the plugin:
 ```
 
 After installation, all `/gdim-*` commands will be available.
+
+### Codex CLI (Skills)
+
+Codex CLI discovers skills from your Codex home directory (usually `~/.codex/skills/`). To install:
+
+```bash
+mkdir -p ~/.codex/skills
+rsync -a skills/ ~/.codex/skills/
+```
+
+To update later, re-run the same `rsync` command.
+
+### Kiro CLI (Skills)
+
+Kiro CLI can load skills from `.kiro/skills/**/SKILL.md` (workspace) and use them via an agent profile.
+
+1) Install skills into the current repo/workspace:
+
+```bash
+mkdir -p .kiro/skills
+rsync -a skills/ .kiro/skills/
+```
+
+2) Create an agent that includes the skill resources (this opens an editor):
+
+```bash
+mkdir -p .kiro/agents
+kiro-cli agent create --name "GDIM Agent" --directory .kiro/agents
+```
+
+3) In `.kiro/agents/gdim_agent.json`, add this resource entry:
+
+```json
+{ "resources": ["skill://.kiro/skills/**/SKILL.md"] }
+```
+
+4) Start a chat with that agent:
+
+```bash
+kiro-cli chat --agent "GDIM Agent"
+```
 
 ## Relationship to GDIM Specification
 
