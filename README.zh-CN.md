@@ -28,16 +28,21 @@
 - 项目级 `.agents/skills/`（从当前目录向上到仓库根目录）
 - 用户级 `$HOME/.agents/skills/`
 
-本仓库已包含 `.agents/skills`（符号链接） -> `skills/`，因此项目级 Codex 可开箱即用。
-
-如果你希望安装到用户级：
+用户级安装：
 
 ```bash
 mkdir -p ~/.agents/skills
 rsync -a skills/ ~/.agents/skills/
 ```
 
-后续更新同样重复执行上述 `rsync` 命令即可。
+项目级安装（在你的目标项目目录执行）：
+
+```bash
+mkdir -p .agents/skills
+rsync -a /path/to/gdim-workflow-skill/skills/ .agents/skills/
+```
+
+后续更新同样重复执行对应的 `rsync` 命令即可。
 
 提示：
 - 在 Codex app/IDE 中，匹配的 skill 可以自动触发。

@@ -4,9 +4,9 @@
 
 ### Codex 技能支持增强
 
-- 新增 `.agents/skills -> ../skills` 符号链接，支持 Codex 项目级技能自动扫描
 - 每个 skill 新增 `agents/openai.yaml`，补充 Codex 展示与默认调用元数据
 - 根据 Codex 官方 skills 文档，更新 README 中的 Codex 安装路径为 `$HOME/.agents/skills`
+- 补充项目级安装方式（在目标项目创建 `.agents/skills/` 并同步 skills）
 - 补充 Codex 使用说明：自动触发、按名称显式调用、`/skills` 查看已加载技能
 
 ### 技能资源可移植性增强

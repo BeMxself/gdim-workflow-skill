@@ -28,16 +28,21 @@ Per Codex skills docs, Codex scans skill folders from:
 - project-level `.agents/skills/` (from current directory up to repo root)
 - user-level `$HOME/.agents/skills/`
 
-This repo includes `.agents/skills` (symlink) -> `skills/`, so project-level Codex usage works out of the box.
-
-If you want user-level installation:
+User-level installation:
 
 ```bash
 mkdir -p ~/.agents/skills
 rsync -a skills/ ~/.agents/skills/
 ```
 
-To update later, re-run the same `rsync` command.
+Project-level installation (run in your target project):
+
+```bash
+mkdir -p .agents/skills
+rsync -a /path/to/gdim-workflow-skill/skills/ .agents/skills/
+```
+
+To update later, re-run the corresponding `rsync` command.
 
 Tip:
 - In Codex app/IDE, matching skills can be invoked automatically.
