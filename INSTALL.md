@@ -34,6 +34,8 @@
 
 ```
 gdim-workflow/
+├── .agents/
+│   └── skills -> ../skills       # Codex 项目级 skills 入口（符号链接）
 ├── .claude-plugin/
 │   └── plugin.json              # Plugin 元数据
 ├── skills/                      # Skills 目录

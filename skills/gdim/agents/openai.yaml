@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDIM"
+  short_description: "Background knowledge for Gap-Driven Iteration Model - loaded automatically when working on GDIM workflows"
+  default_prompt: "Use the gdim skill for this request."

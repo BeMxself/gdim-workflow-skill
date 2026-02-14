@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDIM Design"
+  short_description: "Use when creating design documents for a GDIM round after scope is defined"
+  default_prompt: "Use the gdim-design skill for this request."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDIM Execute"
+  short_description: "Use during code implementation to maintain discipline and avoid scope creep"
+  default_prompt: "Use the gdim-execute skill for this request."

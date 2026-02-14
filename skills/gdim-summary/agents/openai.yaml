@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDIM Summary"
+  short_description: "Use after implementation to document execution results factually without judgment"
+  default_prompt: "Use the gdim-summary skill for this request."

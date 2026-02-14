@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDIM Intent"
+  short_description: "Use when defining Intent for a GDIM workflow from external docs, brainstorming, or user requirements"
+  default_prompt: "Use the gdim-intent skill for this request."

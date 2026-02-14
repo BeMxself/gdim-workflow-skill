@@ -1,5 +1,21 @@
 # 更新日志
 
+## v1.2.0 - 2026-02-14
+
+### Codex 技能支持增强
+
+- 新增 `.agents/skills -> ../skills` 符号链接，支持 Codex 项目级技能自动扫描
+- 每个 skill 新增 `agents/openai.yaml`，补充 Codex 展示与默认调用元数据
+- 根据 Codex 官方 skills 文档，更新 README 中的 Codex 安装路径为 `$HOME/.agents/skills`
+- 补充 Codex 使用说明：自动触发、按名称显式调用、`/skills` 查看已加载技能
+
+### 技能资源可移植性增强
+
+- 将完整规范文档移动到 `skills/gdim/references/docs/`，随 skills 一起分发
+- 更新 `gdim` 核心技能与配套文档中的引用路径，避免对仓库根目录 `docs/` 的依赖
+
+---
+
 ## v1.1.0 - 2026-02-11
 
 ### Plugin 化

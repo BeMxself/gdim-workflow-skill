@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDIM Plan"
+  short_description: "Use when creating executable implementation plans from GDIM design documents"
+  default_prompt: "Use the gdim-plan skill for this request."

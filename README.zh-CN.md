@@ -22,19 +22,27 @@
 
 安装完成后，所有 `/gdim-*` 命令即可使用。
 
-### Codex CLI（Skills）
+### Codex（Skills）
 
-Codex CLI 会从 Codex Home 目录（通常是 `~/.codex/skills/`）发现 skills。安装方式：
+根据 Codex 官方 skills 文档，Codex 会从以下位置扫描 skills：
+- 项目级 `.agents/skills/`（从当前目录向上到仓库根目录）
+- 用户级 `$HOME/.agents/skills/`
+
+本仓库已包含 `.agents/skills`（符号链接） -> `skills/`，因此项目级 Codex 可开箱即用。
+
+如果你希望安装到用户级：
 
 ```bash
-mkdir -p ~/.codex/skills
-rsync -a skills/ ~/.codex/skills/
+mkdir -p ~/.agents/skills
+rsync -a skills/ ~/.agents/skills/
 ```
 
 后续更新同样重复执行上述 `rsync` 命令即可。
 
-注意：规范文档已与核心 skill 放在同一目录（`skills/gdim/references/docs/`），仅安装 `skills/` 也可直接访问。  
-`gdim` skill 还内置了精简便携参考：`skills/gdim/references/gdim-portable-reference.md`。
+提示：
+- 在 Codex app/IDE 中，匹配的 skill 可以自动触发。
+- 你也可以显式要求 Codex 使用某个 skill（例如：`gdim-scope`）。
+- 在 Codex 中使用 `/skills` 可查看当前生效的 skills。
 
 ### Kiro CLI（Skills）
 

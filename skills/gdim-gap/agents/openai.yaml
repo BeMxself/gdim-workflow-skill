@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDIM Gap"
+  short_description: "Use after execution summary to identify deviations and determine if work continues"
+  default_prompt: "Use the gdim-gap skill for this request."

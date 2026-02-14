@@ -22,19 +22,27 @@ Then install the plugin:
 
 After installation, all `/gdim-*` commands will be available.
 
-### Codex CLI (Skills)
+### Codex (Skills)
 
-Codex CLI discovers skills from your Codex home directory (usually `~/.codex/skills/`). To install:
+Per Codex skills docs, Codex scans skill folders from:
+- project-level `.agents/skills/` (from current directory up to repo root)
+- user-level `$HOME/.agents/skills/`
+
+This repo includes `.agents/skills` (symlink) -> `skills/`, so project-level Codex usage works out of the box.
+
+If you want user-level installation:
 
 ```bash
-mkdir -p ~/.codex/skills
-rsync -a skills/ ~/.codex/skills/
+mkdir -p ~/.agents/skills
+rsync -a skills/ ~/.agents/skills/
 ```
 
 To update later, re-run the same `rsync` command.
 
-Note: specification docs are now co-located with the core skill at `skills/gdim/references/docs/`, so skills-only installs can access them directly.
-The `gdim` skill also includes `skills/gdim/references/gdim-portable-reference.md` as a compact fallback reference.
+Tip:
+- In Codex app/IDE, matching skills can be invoked automatically.
+- You can also ask Codex explicitly to use a skill by name (for example: `gdim-scope`).
+- Use `/skills` in Codex to view active skills.
 
 ### Kiro CLI (Skills)
 

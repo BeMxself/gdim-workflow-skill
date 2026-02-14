@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDIM Init"
+  short_description: "Use when starting a new GDIM workflow to initialize directory structure"
+  default_prompt: "Use the gdim-init skill for this request."

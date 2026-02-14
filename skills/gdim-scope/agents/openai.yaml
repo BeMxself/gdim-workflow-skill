@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDIM Scope"
+  short_description: "Use when starting a GDIM round to define strict work boundaries before design"
+  default_prompt: "Use the gdim-scope skill for this request."

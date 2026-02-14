@@ -1,0 +1,4 @@
+interface:
+  display_name: "GDIM Final"
+  short_description: "Use when GDIM workflow completes to generate final summary report"
+  default_prompt: "Use the gdim-final skill for this request."

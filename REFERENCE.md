@@ -7,6 +7,7 @@
 - **优化**: Token 效率、快速查找、可执行性
 - **内容**: 核心规则、红旗清单、快速参考表
 - **使用**: `/gdim-*` 命令调用
+- **Codex 支持**: 每个 skill 均包含 `agents/openai.yaml`，用于 Codex 的技能展示与触发提示
 
 ### 规范文档（skills/gdim/references/docs/ 子目录）
 - **目的**: 完整的方法论说明和教学
