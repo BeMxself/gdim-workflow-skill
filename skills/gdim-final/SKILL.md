@@ -9,8 +9,16 @@ description: Use when GDIM workflow completes to generate final summary report
 
 ## Usage
 
+Claude Code (plugin):
+
 ```
-gdim-final
+/gdim-final
+```
+
+Codex (skills):
+
+```
+$gdim-final
 ```
 
 ## Prerequisites

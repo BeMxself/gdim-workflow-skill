@@ -9,8 +9,16 @@ description: Use when starting a GDIM round to define strict work boundaries bef
 
 ## Usage
 
+Claude Code (plugin):
+
 ```
-gdim-scope <round_number>
+/gdim-scope <round_number>
+```
+
+Codex (skills):
+
+```
+$gdim-scope <round_number>
 ```
 
 ## Automatic Round Detection
@@ -136,4 +144,4 @@ Write to: `.ai-workflows/YYYYMMDD-task-slug/00-scope-definition.round{round_numb
 
 ## Next Step
 
-After Scope is confirmed → `gdim-design <round_number>`
+After Scope is confirmed → `/gdim-design <round_number>` (Codex: `$gdim-design <round_number>`)

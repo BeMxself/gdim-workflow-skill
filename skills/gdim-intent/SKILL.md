@@ -117,4 +117,4 @@ Notice: Intent is **much smaller** than brainstorming output. It extracts the ag
 
 Write to: `.ai-workflows/YYYYMMDD-task-slug/00-intent.md`
 
-After Intent is confirmed, user proceeds to `gdim-scope 1`.
+After Intent is confirmed, user proceeds to `/gdim-scope 1` (Codex: `$gdim-scope 1`).

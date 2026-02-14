@@ -84,4 +84,4 @@ Use this order so the skill works in Claude plugin, Codex skills-only installs, 
 | Summary | Execution results | `05-execution-summary.roundN.md` | Facts, no judgment |
 | Gap | Summary + Design | `03-gap-analysis.roundN.md` | Two layers: Round + Intent |
 
-Use specific `gdim-*` skills for detailed stage guidance.
+Use specific GDIM stage skills for detailed guidance (Claude Code: `/gdim-*`, Codex: `$gdim-*`).

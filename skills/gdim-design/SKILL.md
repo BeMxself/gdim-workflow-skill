@@ -9,8 +9,16 @@ Creates design document for current round, strictly within scope boundaries.
 
 ## Usage
 
+Claude Code (plugin):
+
 ```
-gdim-design <round_number>
+/gdim-design <round_number>
+```
+
+Codex (skills):
+
+```
+$gdim-design <round_number>
 ```
 
 ## Inputs
@@ -142,4 +150,4 @@ Write to: `.ai-workflows/YYYYMMDD-task-slug/01-design.round{round_number}.md`
 
 ## Next Step
 
-After design is confirmed → `gdim-plan <round_number>`
+After design is confirmed → `/gdim-plan <round_number>` (Codex: `$gdim-plan <round_number>`)

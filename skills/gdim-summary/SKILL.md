@@ -9,8 +9,16 @@ description: Use after implementation to document execution results factually wi
 
 ## Usage
 
+Claude Code (plugin):
+
 ```
-gdim-summary <round_number>
+/gdim-summary <round_number>
+```
+
+Codex (skills):
+
+```
+$gdim-summary <round_number>
 ```
 
 ## Inputs
@@ -145,4 +153,4 @@ Write to: `.ai-workflows/YYYYMMDD-task-slug/05-execution-summary.round{round_num
 
 ## Next Step
 
-After summary is confirmed → `gdim-gap <round_number>` for Gap Analysis
+After summary is confirmed → `/gdim-gap <round_number>` (Codex: `$gdim-gap <round_number>`) for Gap Analysis

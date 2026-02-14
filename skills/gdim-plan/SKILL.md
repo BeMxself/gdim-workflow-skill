@@ -9,8 +9,16 @@ Converts design into step-by-step executable plan.
 
 ## Usage
 
+Claude Code (plugin):
+
 ```
-gdim-plan <round_number>
+/gdim-plan <round_number>
+```
+
+Codex (skills):
+
+```
+$gdim-plan <round_number>
 ```
 
 ## Input
@@ -117,4 +125,4 @@ Write to: `.ai-workflows/YYYYMMDD-task-slug/02-plan.round{round_number}.md`
 
 ## Next Step
 
-After plan is confirmed → Execute the plan (or `gdim-execute <round_number>` for execution guidance)
+After plan is confirmed → Execute the plan (or `/gdim-execute <round_number>` (Codex: `$gdim-execute <round_number>`) for execution guidance)

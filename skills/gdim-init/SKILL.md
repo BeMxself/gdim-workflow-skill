@@ -9,17 +9,25 @@ Creates the `.ai-workflows/` directory structure for a new GDIM task.
 
 ## Usage
 
+Claude Code (plugin):
+
 ```
-gdim-init <task_slug>
+/gdim-init <task_slug>
 ```
 
-Example: `gdim-init user-authentication`
+Codex (skills):
+
+```
+$gdim-init <task_slug>
+```
+
+Example (Claude Code): `/gdim-init user-authentication`
 
 ## What It Does
 
 Creates directory: `.ai-workflows/YYYYMMDD-<task_slug>/`
 
-The user will create `00-intent.md` manually or using `gdim-intent`.
+The user will create `00-intent.md` manually or using `/gdim-intent` (Codex: `$gdim-intent`).
 
 ## Implementation
 
@@ -30,7 +38,7 @@ TASK_SLUG="<task_slug>"
 # Validate task slug
 if [ -z "$TASK_SLUG" ]; then
   echo "Error: Task slug required"
-  echo "Usage: gdim-init <task_slug>"
+  echo "Usage: /gdim-init <task_slug>"
   exit 1
 fi
 
@@ -47,13 +55,13 @@ mkdir -p "$WORKFLOW_DIR"
 echo "Created GDIM workflow directory: $WORKFLOW_DIR"
 echo ""
 echo "Next steps:"
-echo "1. Create Intent: gdim-intent"
+echo "1. Create Intent: /gdim-intent"
 echo "2. Or manually create: $WORKFLOW_DIR/00-intent.md"
 ```
 
 ## Next Steps
 
 After initialization:
-1. Use `gdim-intent` to generate Intent through guided questions
+1. Use `/gdim-intent` (Codex: `$gdim-intent`) to generate Intent through guided questions
 2. Or manually create `00-intent.md` if you have clear requirements
-3. Then use `gdim-scope 1` to start Round 1
+3. Then use `/gdim-scope 1` (Codex: `$gdim-scope 1`) to start Round 1

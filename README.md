@@ -28,6 +28,8 @@
 - 项目级 `.agents/skills/`（从当前目录向上到仓库根目录）
 - 用户级 `$HOME/.agents/skills/`
 
+说明：本文后续的工作流“使用示例”默认以 Claude Code 的 `/gdim-*` 命令为主；在 Codex 中可用 `$gdim-*` 调用同名 skills。
+
 方式 A（推荐）：在 Codex 内使用 `$skill-installer` 从 GitHub 安装
 
 在 Codex 对话里输入类似下面的内容即可（一次可以装多个路径）：

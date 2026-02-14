@@ -9,8 +9,16 @@ description: Use after execution summary to identify deviations and determine if
 
 ## Usage
 
+Claude Code (plugin):
+
 ```
-gdim-gap <round_number>
+/gdim-gap <round_number>
+```
+
+Codex (skills):
+
+```
+$gdim-gap <round_number>
 ```
 
 ## Inputs
@@ -184,5 +192,5 @@ Write to: `.ai-workflows/YYYYMMDD-task-slug/03-gap-analysis.round{round_number}.
 
 ## Next Steps
 
-- If continuing → `gdim-scope <round_number+1>`
-- If complete → `gdim-final`
+- If continuing → `/gdim-scope <round_number+1>` (Codex: `$gdim-scope <round_number+1>`)
+- If complete → `/gdim-final` (Codex: `$gdim-final`)

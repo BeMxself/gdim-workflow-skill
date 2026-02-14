@@ -28,6 +28,8 @@ Per Codex skills docs, Codex scans skill folders from:
 - project-level `.agents/skills/` (from current directory up to repo root)
 - user-level `$HOME/.agents/skills/`
 
+Note: the workflow usage examples in this README primarily use Claude Code `/gdim-*` commands; in Codex you can invoke the same skills as `$gdim-*`.
+
 Option A (Recommended): Install via `$skill-installer` inside Codex
 
 In a Codex chat, you can ask the installer to pull these skills from GitHub (multiple paths in one run):

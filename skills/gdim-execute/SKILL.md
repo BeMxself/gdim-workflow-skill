@@ -9,8 +9,16 @@ description: Use during code implementation to maintain discipline and avoid sco
 
 ## Usage
 
+Claude Code (plugin):
+
 ```
-gdim-execute <round_number>
+/gdim-execute <round_number>
+```
+
+Codex (skills):
+
+```
+$gdim-execute <round_number>
 ```
 
 Loads execution rules for current round.
@@ -157,4 +165,4 @@ For complex rounds, maintain `04-execution-log.round{round_number}.md`:
 
 ## After Execution
 
-→ `gdim-summary <round_number>` to document what actually happened
+→ `/gdim-summary <round_number>` (Codex: `$gdim-summary <round_number>`) to document what actually happened
