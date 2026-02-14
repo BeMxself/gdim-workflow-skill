@@ -28,6 +28,28 @@ Per Codex skills docs, Codex scans skill folders from:
 - project-level `.agents/skills/` (from current directory up to repo root)
 - user-level `$HOME/.agents/skills/`
 
+Option A (Recommended): Install via `$skill-installer` inside Codex
+
+In a Codex chat, you can ask the installer to pull these skills from GitHub (multiple paths in one run):
+
+```text
+$skill-installer Please install these skills from GitHub repo BeMxself/gdim-workflow-skill:
+- skills/gdim
+- skills/gdim-init
+- skills/gdim-intent
+- skills/gdim-scope
+- skills/gdim-design
+- skills/gdim-plan
+- skills/gdim-execute
+- skills/gdim-summary
+- skills/gdim-gap
+- skills/gdim-final
+```
+
+Restart Codex to pick up the new skills.
+
+Option B: Manual install (rsync)
+
 User-level installation:
 
 ```bash
@@ -46,7 +68,7 @@ To update later, re-run the corresponding `rsync` command.
 
 Tip:
 - In Codex app/IDE, matching skills can be invoked automatically.
-- You can also ask Codex explicitly to use a skill by name (for example: `gdim-scope`).
+- You can also ask Codex explicitly to use a skill by name (for example: `$gdim-scope`).
 - Use `/skills` in Codex to view active skills.
 
 ### Kiro CLI (Skills)

@@ -28,6 +28,28 @@
 - 项目级 `.agents/skills/`（从当前目录向上到仓库根目录）
 - 用户级 `$HOME/.agents/skills/`
 
+方式 A（推荐）：在 Codex 内使用 `$skill-installer` 从 GitHub 安装
+
+在 Codex 对话里输入类似下面的内容即可（一次可以装多个路径）：
+
+```text
+$skill-installer 请从 GitHub 仓库 BeMxself/gdim-workflow-skill 安装以下 skills：
+- skills/gdim
+- skills/gdim-init
+- skills/gdim-intent
+- skills/gdim-scope
+- skills/gdim-design
+- skills/gdim-plan
+- skills/gdim-execute
+- skills/gdim-summary
+- skills/gdim-gap
+- skills/gdim-final
+```
+
+安装完成后，重启 Codex 以加载新 skills。
+
+方式 B：手动同步 skills 目录（rsync）
+
 用户级安装：
 
 ```bash
@@ -46,7 +68,7 @@ rsync -a /path/to/gdim-workflow-skill/skills/ .agents/skills/
 
 提示：
 - 在 Codex app/IDE 中，匹配的 skill 可以自动触发。
-- 你也可以显式要求 Codex 使用某个 skill（例如：`gdim-scope`）。
+- 你也可以显式要求 Codex 使用某个 skill（例如：`$gdim-scope`）。
 - 在 Codex 中使用 `/skills` 可查看当前生效的 skills。
 
 ### Kiro CLI（Skills）
