@@ -10,19 +10,19 @@ Creates design document for current round, strictly within scope boundaries.
 ## Usage
 
 ```
-/gdim-design <round-number>
+gdim-design <round_number>
 ```
 
 ## Inputs
 
-- `00-scope-definition.round$0.md`
+- `00-scope-definition.round{round_number}.md`
 - `00-intent.md`
-- `03-gap-analysis.round$((N-1)).md` (if Round 2+)
+- `03-gap-analysis.round{round_number-1}.md` (if Round 2+)
 - External reference docs (if specified in Intent)
 
 ## Output
 
-`01-design.round$0.md`
+`01-design.round{round_number}.md`
 
 ## Design Requirements
 
@@ -30,11 +30,11 @@ Creates design document for current round, strictly within scope boundaries.
 
 ```yaml
 ---
-round: $0
+round: <round_number>
 driven_by: Intent  # R1
 # OR
 driven_by: [GAP-01, GAP-02]  # R2+
-scope: 00-scope-definition.round$0.md
+scope: 00-scope-definition.round{round_number}.md
 external_refs:  # Optional
   - docs/api-spec.md
   - docs/design-system.md
@@ -100,7 +100,7 @@ From baseline testing: You will be tempted to design "complete" systems. Resist.
 ### Round 2+
 
 ```markdown
-# Design — Round $0
+# Design — Round <round_number>
 
 [YAML frontmatter with driven_by: [GAP-XX, GAP-YY]]
 
@@ -138,8 +138,8 @@ If design requires information you don't have:
 
 ## Output Location
 
-Write to: `.ai-workflows/YYYYMMDD-task-slug/01-design.round$0.md`
+Write to: `.ai-workflows/YYYYMMDD-task-slug/01-design.round{round_number}.md`
 
 ## Next Step
 
-After design is confirmed → `/gdim-plan $0`
+After design is confirmed → `gdim-plan <round_number>`

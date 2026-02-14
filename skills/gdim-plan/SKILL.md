@@ -10,16 +10,16 @@ Converts design into step-by-step executable plan.
 ## Usage
 
 ```
-/gdim-plan <round-number>
+gdim-plan <round_number>
 ```
 
 ## Input
 
-`01-design.round$0.md`
+`01-design.round{round_number}.md`
 
 ## Output
 
-`02-plan.round$0.md`
+`02-plan.round{round_number}.md`
 
 ## Plan Requirements
 
@@ -27,8 +27,8 @@ Converts design into step-by-step executable plan.
 
 ```yaml
 ---
-round: $0
-design: 01-design.round$0.md
+round: <round_number>
+design: 01-design.round{round_number}.md
 ---
 ```
 
@@ -43,7 +43,7 @@ Each step must be:
 ### Template
 
 ```markdown
-# Plan — Round $0
+# Plan — Round <round_number>
 
 ## Design Mapping
 
@@ -113,8 +113,8 @@ Cannot plan this step without knowing:
 
 ## Output Location
 
-Write to: `.ai-workflows/YYYYMMDD-task-slug/02-plan.round$0.md`
+Write to: `.ai-workflows/YYYYMMDD-task-slug/02-plan.round{round_number}.md`
 
 ## Next Step
 
-After plan is confirmed → Execute the plan (or `/gdim-execute $0` for execution guidance)
+After plan is confirmed → Execute the plan (or `gdim-execute <round_number>` for execution guidance)

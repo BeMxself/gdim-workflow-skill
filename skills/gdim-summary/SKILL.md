@@ -10,19 +10,19 @@ description: Use after implementation to document execution results factually wi
 ## Usage
 
 ```
-/gdim-summary <round-number>
+gdim-summary <round_number>
 ```
 
 ## Inputs
 
-- `01-design.round$0.md`
-- `02-plan.round$0.md`
+- `01-design.round{round_number}.md`
+- `02-plan.round{round_number}.md`
 - Actual code changes
-- `04-execution-log.round$0.md` (if exists)
+- `04-execution-log.round{round_number}.md` (if exists)
 
 ## Output
 
-`05-execution-summary.round$0.md`
+`05-execution-summary.round{round_number}.md`
 
 ## Summary Requirements
 
@@ -44,7 +44,7 @@ description: Use after implementation to document execution results factually wi
 ## Template
 
 ```markdown
-# Execution Summary — Round $0
+# Execution Summary — Round <round_number>
 
 ## Completed
 
@@ -141,8 +141,8 @@ Before finalizing summary, check:
 
 ## Output Location
 
-Write to: `.ai-workflows/YYYYMMDD-task-slug/05-execution-summary.round$0.md`
+Write to: `.ai-workflows/YYYYMMDD-task-slug/05-execution-summary.round{round_number}.md`
 
 ## Next Step
 
-After summary is confirmed → `/gdim-gap $0` for Gap Analysis
+After summary is confirmed → `gdim-gap <round_number>` for Gap Analysis

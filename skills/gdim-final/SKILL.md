@@ -10,7 +10,7 @@ description: Use when GDIM workflow completes to generate final summary report
 ## Usage
 
 ```
-/gdim-final
+gdim-final
 ```
 
 ## Prerequisites

@@ -11,7 +11,7 @@ Helps create `00-intent.md` through iterative refinement.
 
 Intent can come from:
 1. **External documents** - Requirements, PRDs, design specs, bug reports
-2. **Brainstorming** - Use `superpowers:brainstorming` skill first, then extract Intent
+2. **Brainstorming** - Use the `brainstorming` skill first, then extract Intent
 3. **User description** - Direct conversation with user
 
 ## Process
@@ -64,7 +64,7 @@ Intent can come from:
 
 ## Example: From Brainstorming
 
-If user ran `/brainstorm` and you explored "user authentication system":
+If user ran `brainstorming` and you explored "user authentication system":
 
 **Brainstorming output** (100 lines of exploration):
 - OAuth, password, 2FA, SSO discussed
@@ -117,4 +117,4 @@ Notice: Intent is **much smaller** than brainstorming output. It extracts the ag
 
 Write to: `.ai-workflows/YYYYMMDD-task-slug/00-intent.md`
 
-After Intent is confirmed, user proceeds to `/gdim-scope 1`.
+After Intent is confirmed, user proceeds to `gdim-scope 1`.

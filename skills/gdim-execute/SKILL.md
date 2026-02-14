@@ -10,7 +10,7 @@ description: Use during code implementation to maintain discipline and avoid sco
 ## Usage
 
 ```
-/gdim-execute <round-number>
+gdim-execute <round_number>
 ```
 
 Loads execution rules for current round.
@@ -21,7 +21,7 @@ Loads execution rules for current round.
 
 ## Input
 
-`02-plan.round$0.md`
+`02-plan.round{round_number}.md`
 
 ## During Execution
 
@@ -123,10 +123,10 @@ These are fine IF they don't change behavior or scope.
 
 ## Execution Log (Optional)
 
-For complex rounds, maintain `04-execution-log.round$0.md`:
+For complex rounds, maintain `04-execution-log.round{round_number}.md`:
 
 ```markdown
-# Execution Log — Round $0
+# Execution Log — Round <round_number>
 
 ## Step 1: Create ProfilePage component
 - ✓ Created src/components/ProfilePage.tsx
@@ -157,4 +157,4 @@ For complex rounds, maintain `04-execution-log.round$0.md`:
 
 ## After Execution
 
-→ `/gdim-summary $0` to document what actually happened
+→ `gdim-summary <round_number>` to document what actually happened

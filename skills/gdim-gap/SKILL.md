@@ -10,18 +10,18 @@ description: Use after execution summary to identify deviations and determine if
 ## Usage
 
 ```
-/gdim-gap <round-number>
+gdim-gap <round_number>
 ```
 
 ## Inputs
 
 - `00-intent.md`
-- `01-design.round$0.md`
-- `05-execution-summary.round$0.md`
+- `01-design.round{round_number}.md`
+- `05-execution-summary.round{round_number}.md`
 
 ## Output
 
-`03-gap-analysis.round$0.md`
+`03-gap-analysis.round{round_number}.md`
 
 ## Two-Layer Structure
 
@@ -55,7 +55,7 @@ Gap Analysis has TWO distinct layers:
 ## Template
 
 ```markdown
-# Gap Analysis — Round $0
+# Gap Analysis — Round <round_number>
 
 ## 1. Round Gap (This Round's Deviations)
 
@@ -91,15 +91,15 @@ Gap Analysis has TWO distinct layers:
 
 | Gap ID | Strategy | Target Round | Priority |
 |--------|----------|--------------|----------|
-| GAP-01 | Add error handling | R$((N+1)) | High |
-| GAP-02 | Implement validation | R$((N+1)) | Medium |
+| GAP-01 | Add error handling | R<round_number+1> | High |
+| GAP-02 | Implement validation | R<round_number+1> | Medium |
 
 ## 4. Exit Decision
 
 - [ ] No High Severity Gap in this round
 - [ ] Intent fully covered (100%)
 
-**Decision**: Continue to Round $((N+1)) / Generate Final Report
+**Decision**: Continue to Round <round_number+1> / Generate Final Report
 
 **Rationale**: [Why continuing or why stopping]
 ```
@@ -151,7 +151,7 @@ From baseline testing:
 If Round Gap is empty but Intent not fully covered:
 - **This is normal** - means this round succeeded
 - **Decision**: Continue to next round for remaining Intent
-- **Rationale**: "Round $0 completed successfully. Continuing for uncompleted Intent items."
+- **Rationale**: "Round <round_number> completed successfully. Continuing for uncompleted Intent items."
 
 ### Edge Case: No Gaps and Intent Complete
 
@@ -180,9 +180,9 @@ User: "The search is slow with many results"
 
 ## Output Location
 
-Write to: `.ai-workflows/YYYYMMDD-task-slug/03-gap-analysis.round$0.md`
+Write to: `.ai-workflows/YYYYMMDD-task-slug/03-gap-analysis.round{round_number}.md`
 
 ## Next Steps
 
-- If continuing → `/gdim-scope $((N+1))`
-- If complete → `/gdim-final`
+- If continuing → `gdim-scope <round_number+1>`
+- If complete → `gdim-final`

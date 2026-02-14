@@ -10,7 +10,7 @@ description: Use when starting a GDIM round to define strict work boundaries bef
 ## Usage
 
 ```
-/gdim-scope <round-number>
+gdim-scope <round_number>
 ```
 
 ## Automatic Round Detection
@@ -82,11 +82,11 @@ Based on baseline testing, you WILL be tempted to include everything. Resist:
 ### Template
 
 ```markdown
-# Scope Definition — Round $0
+# Scope Definition — Round <round_number>
 
 ## Scope Basis
 - Intent: 00-intent.md
-- Gap Source: 03-gap-analysis.round$((N-1)).md
+- Gap Source: 03-gap-analysis.round{round_number-1}.md
 - Gaps to Close: [GAP-01, GAP-02]
 
 ## In Scope
@@ -132,8 +132,8 @@ If you see 2+ reasonable ways to split scope, **ask the user**. Don't choose for
 
 ## Output Location
 
-Write to: `.ai-workflows/YYYYMMDD-task-slug/00-scope-definition.round$0.md`
+Write to: `.ai-workflows/YYYYMMDD-task-slug/00-scope-definition.round{round_number}.md`
 
 ## Next Step
 
-After Scope is confirmed → `/gdim-design $0`
+After Scope is confirmed → `gdim-design <round_number>`
