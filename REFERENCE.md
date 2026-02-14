@@ -8,7 +8,7 @@
 - **内容**: 核心规则、红旗清单、快速参考表
 - **使用**: `/gdim-*` 命令调用
 
-### 规范文档（docs/ 子目录）
+### 规范文档（skills/gdim/references/docs/ 子目录）
 - **目的**: 完整的方法论说明和教学
 - **优化**: 可读性、完整性、示例丰富
 - **内容**: 详细模板、设计理念、适用场景
@@ -17,12 +17,12 @@
 ## 何时查阅规范文档
 
 ### 1. 学习 GDIM
-**首次接触** → 阅读 `docs/GDIM 实践快速指南.md`
+**首次接触** → 阅读 `skills/gdim/references/docs/GDIM 实践快速指南.md`
 - 通俗易懂的介绍
 - 生动的比喻和例子
 - 常见陷阱和解决方法
 
-**深入理解** → 阅读 `docs/GDIM 规范.md`
+**深入理解** → 阅读 `skills/gdim/references/docs/GDIM 规范.md`
 - 完整的方法论
 - 详细的模板
 - 违规判定标准
@@ -33,7 +33,7 @@ Skills 提供的是**简化模板**，如果需要：
 - 详细的章节结构
 - 多种场景的模板变体
 
-→ 查阅 `docs/GDIM 提示词模版.md`
+→ 查阅 `skills/gdim/references/docs/GDIM 提示词模版.md`
 
 ### 3. 前端项目
 Skills 是通用版本，前端项目有特殊约束：
@@ -41,7 +41,7 @@ Skills 是通用版本，前端项目有特殊约束：
 - 前端特有的"假完成"问题
 - 组件级别的 Scope 定义
 
-→ 查阅 `docs/GDIM 提示词模版（前端版）.md`
+→ 查阅 `skills/gdim/references/docs/GDIM 提示词模版（前端版）.md`
 
 ### 4. 定制工作流
 想修改 GDIM 流程以适应团队需求：
@@ -49,7 +49,7 @@ Skills 是通用版本，前端项目有特殊约束：
 - 了解哪些是核心约束（不可变）
 - 了解哪些是推荐实践（可调整）
 
-→ 查阅 `docs/GDIM 规范.md` 的"模型定位"和"核心规则"章节
+→ 查阅 `skills/gdim/references/docs/GDIM 规范.md` 的"模型定位"和"核心规则"章节
 
 ## 规范文档快速索引
 
@@ -108,9 +108,9 @@ Skills 是通用版本，前端项目有特殊约束：
 ## 实践建议
 
 ### 初学者路径
-1. 读 `docs/GDIM 实践快速指南.md`（30 分钟）
+1. 读 `skills/gdim/references/docs/GDIM 实践快速指南.md`（30 分钟）
 2. 用 skills 跑一个小项目（2-3 小时）
-3. 遇到问题时查阅 `docs/GDIM 规范.md` 对应章节
+3. 遇到问题时查阅 `skills/gdim/references/docs/GDIM 规范.md` 对应章节
 
 ### 熟练使用者
 1. 日常工作只用 skills（`/gdim-*` 命令）
@@ -118,7 +118,7 @@ Skills 是通用版本，前端项目有特殊约束：
 3. 定制工作流时参考规范的设计理念
 
 ### 团队推广
-1. 让团队读 `docs/GDIM 实践快速指南.md`
+1. 让团队读 `skills/gdim/references/docs/GDIM 实践快速指南.md`
 2. 提供 skills 作为执行工具
 3. 建立团队的 GDIM 最佳实践文档（基于规范定制）
 

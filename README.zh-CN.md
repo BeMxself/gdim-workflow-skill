@@ -33,6 +33,9 @@ rsync -a skills/ ~/.codex/skills/
 
 后续更新同样重复执行上述 `rsync` 命令即可。
 
+注意：规范文档已与核心 skill 放在同一目录（`skills/gdim/references/docs/`），仅安装 `skills/` 也可直接访问。  
+`gdim` skill 还内置了精简便携参考：`skills/gdim/references/gdim-portable-reference.md`。
+
 ### Kiro CLI（Skills）
 
 Kiro CLI 可以从 `.kiro/skills/**/SKILL.md`（workspace 级别）加载 skills，并通过 agent profile 使用。
@@ -65,19 +68,20 @@ kiro-cli chat --agent "GDIM Agent"
 
 ## 与 GDIM 规范的关系
 
-这些 skills 是 GDIM 规范文档的 **可执行伴侣**（完整规范包含在 `docs/` 子目录中）：
+这些 skills 是 GDIM 规范文档的 **可执行伴侣**：
 
 - **Skills**（`skills/`）：用于 Claude Code 的快速规则与工作流指令（调用 `/gdim-*`）
-- **规范**（[`docs/GDIM 规范.md`](docs/GDIM%20规范.md)）：完整方法论、模板与 rationale
-- **快速指南**（[`docs/GDIM 实践快速指南.md`](docs/GDIM%20实践快速指南.md)）：更易读的入门介绍
-- **提示词模板**（[`docs/GDIM 提示词模版.md`](docs/GDIM%20提示词模版.md)）：各阶段更详细的提示词模板
-- **前端模板**（[`docs/GDIM 提示词模版（前端版）.md`](docs/GDIM%20提示词模版（前端版）.md)）：前端项目的额外约束
+- **便携参考**（`skills/gdim/references/gdim-portable-reference.md`）：用于仅安装 skills 的场景
+- **规范**（[`skills/gdim/references/docs/GDIM 规范.md`](skills/gdim/references/docs/GDIM%20规范.md)）：完整方法论、模板与 rationale
+- **快速指南**（[`skills/gdim/references/docs/GDIM 实践快速指南.md`](skills/gdim/references/docs/GDIM%20实践快速指南.md)）：更易读的入门介绍
+- **提示词模板**（[`skills/gdim/references/docs/GDIM 提示词模版.md`](skills/gdim/references/docs/GDIM%20提示词模版.md)）：各阶段更详细的提示词模板
+- **前端模板**（[`skills/gdim/references/docs/GDIM 提示词模版（前端版）.md`](skills/gdim/references/docs/GDIM%20提示词模版（前端版）.md)）：前端项目的额外约束
 
 **什么时候用哪个：**
 - 在 Claude Code 工作 → 用这些 skills（`/gdim-*` 命令）
-- 学习 GDIM → 阅读 [`docs/GDIM 实践快速指南.md`](docs/GDIM%20实践快速指南.md)
-- 需要详细模板 → 参考 [`docs/GDIM 规范.md`](docs/GDIM%20规范.md) 或 [`docs/GDIM 提示词模版.md`](docs/GDIM%20提示词模版.md)
-- 前端项目 → 也请看 [`docs/GDIM 提示词模版（前端版）.md`](docs/GDIM%20提示词模版（前端版）.md)
+- 学习 GDIM → 阅读 [`skills/gdim/references/docs/GDIM 实践快速指南.md`](skills/gdim/references/docs/GDIM%20实践快速指南.md)
+- 需要详细模板 → 参考 [`skills/gdim/references/docs/GDIM 规范.md`](skills/gdim/references/docs/GDIM%20规范.md) 或 [`skills/gdim/references/docs/GDIM 提示词模版.md`](skills/gdim/references/docs/GDIM%20提示词模版.md)
+- 前端项目 → 也请看 [`skills/gdim/references/docs/GDIM 提示词模版（前端版）.md`](skills/gdim/references/docs/GDIM%20提示词模版（前端版）.md)
 
 ## 什么是 GDIM？
 
@@ -243,10 +247,10 @@ Gap 是“预期”与“实际”之间的 **结构性偏差**：
 
 ## 参考资料
 
-- 完整 GDIM 规范：[`docs/GDIM 规范.md`](docs/GDIM%20规范.md)
-- 快速参考指南：[`docs/GDIM 实践快速指南.md`](docs/GDIM%20实践快速指南.md)
-- 提示词模板：[`docs/GDIM 提示词模版.md`](docs/GDIM%20提示词模版.md)
-- 前端专项约束：[`docs/GDIM 提示词模版（前端版）.md`](docs/GDIM%20提示词模版（前端版）.md)
+- 完整 GDIM 规范：[`skills/gdim/references/docs/GDIM 规范.md`](skills/gdim/references/docs/GDIM%20规范.md)
+- 快速参考指南：[`skills/gdim/references/docs/GDIM 实践快速指南.md`](skills/gdim/references/docs/GDIM%20实践快速指南.md)
+- 提示词模板：[`skills/gdim/references/docs/GDIM 提示词模版.md`](skills/gdim/references/docs/GDIM%20提示词模版.md)
+- 前端专项约束：[`skills/gdim/references/docs/GDIM 提示词模版（前端版）.md`](skills/gdim/references/docs/GDIM%20提示词模版（前端版）.md)
 
 ## 版本
 

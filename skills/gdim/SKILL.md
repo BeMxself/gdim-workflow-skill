@@ -7,7 +7,8 @@ description: Background knowledge for Gap-Driven Iteration Model - loaded automa
 
 **Gap-Driven Iteration Model (GDIM)** constrains AI execution through explicit scope limiting and deviation tracking.
 
-**Full specification**: See `docs/GDIM 规范.md` for complete details, templates, and examples. This skill provides quick reference for active workflows.
+**Portable reference**: Use `references/gdim-portable-reference.md` for templates and extended rules in any installation mode.
+For the full long-form specification, read `references/docs/GDIM 规范.md`.
 
 ## The Iron Laws
 
@@ -38,6 +39,14 @@ All work happens in `.ai-workflows/YYYYMMDD-task-slug/`:
 - `05-execution-summary.roundN.md` - What actually happened
 - `03-gap-analysis.roundN.md` - Deviations found
 - `99-final-report.md` - Final summary
+
+## Reference Resolution (Cross-Platform)
+
+Use this order so the skill works in Claude plugin, Codex skills-only installs, and workspace-local installs:
+
+1. `references/gdim-portable-reference.md` (bundled with this skill)
+2. `references/docs/GDIM 规范.md` (bundled with this skill)
+3. This file + stage skills (`gdim-init` ... `gdim-final`) if neither reference file is available
 
 ## Red Flags - STOP Immediately
 

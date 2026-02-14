@@ -30,19 +30,19 @@
 
 **Skills 是规范的"执行版"**：
 - **Skills**（本目录）：快速参考、可调用、Token 高效（~5K 词）
-- **规范**（docs/ 子目录）：完整方法论、详细模板、教学材料
+- **规范**（skills/gdim/references/docs/ 子目录）：完整方法论、详细模板、教学材料
 
 **互补使用**：
 - 日常工作 → 用 Skills（`/gdim-*` 命令）
-- 学习理解 → 读 `docs/GDIM 实践快速指南.md`
-- 详细模板 → 查 `docs/GDIM 规范.md` 或 `docs/GDIM 提示词模版.md`
-- 前端项目 → 查 `docs/GDIM 提示词模版（前端版）.md`
+- 学习理解 → 读 `skills/gdim/references/docs/GDIM 实践快速指南.md`
+- 详细模板 → 查 `skills/gdim/references/docs/GDIM 规范.md` 或 `skills/gdim/references/docs/GDIM 提示词模版.md`
+- 前端项目 → 查 `skills/gdim/references/docs/GDIM 提示词模版（前端版）.md`
 
 **已添加引用**：
 - `gdim/SKILL.md` 头部引用完整规范
 - `README.md` 说明文档关系
 - `REFERENCE.md` 提供详细对照表（章节索引、使用场景）
-- **所有规范文档已复制到 `docs/` 子目录**，skills 完全自包含
+- **所有规范文档已复制到 `skills/gdim/references/docs/` 子目录**，skills 完全自包含
 - **不包含层级化扩展**（该部分仍在完善中）
 
 ### 4. Baseline 测试（已完成）
@@ -181,12 +181,12 @@ description: Use when defining scope - creates In Scope, Out of Scope, and Defer
 所有 skills 已创建在：
 ```
 /Users/songmingxu/Projects/AI_Asset/.claude/skills/
-├── docs/                              # 完整规范文档（已复制）
+├── gdim/SKILL.md
+├── gdim/references/docs/              # 完整规范文档（已复制）
 │   ├── GDIM 规范.md
 │   ├── GDIM 实践快速指南.md
 │   ├── GDIM 提示词模版.md
 │   └── GDIM 提示词模版（前端版）.md
-├── gdim/SKILL.md
 ├── gdim-init/SKILL.md
 ├── gdim-intent/SKILL.md
 ├── gdim-scope/SKILL.md

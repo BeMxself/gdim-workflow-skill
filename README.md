@@ -33,6 +33,9 @@ rsync -a skills/ ~/.codex/skills/
 
 To update later, re-run the same `rsync` command.
 
+Note: specification docs are now co-located with the core skill at `skills/gdim/references/docs/`, so skills-only installs can access them directly.
+The `gdim` skill also includes `skills/gdim/references/gdim-portable-reference.md` as a compact fallback reference.
+
 ### Kiro CLI (Skills)
 
 Kiro CLI can load skills from `.kiro/skills/**/SKILL.md` (workspace) and use them via an agent profile.
@@ -65,19 +68,20 @@ kiro-cli chat --agent "GDIM Agent"
 
 ## Relationship to GDIM Specification
 
-These skills are **executable companions** to the GDIM specification documents (included in `docs/` subdirectory):
+These skills are **executable companions** to the GDIM specification documents:
 
 - **Skills** (`skills/`): Quick-reference rules for active workflows, optimized for Claude Code
-- **Specification** ([`docs/GDIM 规范.md`](docs/GDIM%20规范.md)): Complete methodology, templates, and rationale
-- **Quick Guide** ([`docs/GDIM 实践快速指南.md`](docs/GDIM%20实践快速指南.md)): Human-readable introduction
-- **Prompt Templates** ([`docs/GDIM 提示词模版.md`](docs/GDIM%20提示词模版.md)): Detailed prompts for each stage
-- **Frontend Templates** ([`docs/GDIM 提示词模版（前端版）.md`](docs/GDIM%20提示词模版（前端版）.md)): Frontend-specific constraints
+- **Portable reference** (`skills/gdim/references/gdim-portable-reference.md`): Bundled fallback for skills-only installations
+- **Specification** ([`skills/gdim/references/docs/GDIM 规范.md`](skills/gdim/references/docs/GDIM%20规范.md)): Complete methodology, templates, and rationale
+- **Quick Guide** ([`skills/gdim/references/docs/GDIM 实践快速指南.md`](skills/gdim/references/docs/GDIM%20实践快速指南.md)): Human-readable introduction
+- **Prompt Templates** ([`skills/gdim/references/docs/GDIM 提示词模版.md`](skills/gdim/references/docs/GDIM%20提示词模版.md)): Detailed prompts for each stage
+- **Frontend Templates** ([`skills/gdim/references/docs/GDIM 提示词模版（前端版）.md`](skills/gdim/references/docs/GDIM%20提示词模版（前端版）.md)): Frontend-specific constraints
 
 **When to use what:**
 - Working in Claude Code → Use these skills (`/gdim-*` commands)
-- Learning GDIM → Read [`docs/GDIM 实践快速指南.md`](docs/GDIM%20实践快速指南.md)
-- Need detailed templates → Reference [`docs/GDIM 规范.md`](docs/GDIM%20规范.md) or [`docs/GDIM 提示词模版.md`](docs/GDIM%20提示词模版.md)
-- Frontend projects → Also see [`docs/GDIM 提示词模版（前端版）.md`](docs/GDIM%20提示词模版（前端版）.md)
+- Learning GDIM → Read [`skills/gdim/references/docs/GDIM 实践快速指南.md`](skills/gdim/references/docs/GDIM%20实践快速指南.md)
+- Need detailed templates → Reference [`skills/gdim/references/docs/GDIM 规范.md`](skills/gdim/references/docs/GDIM%20规范.md) or [`skills/gdim/references/docs/GDIM 提示词模版.md`](skills/gdim/references/docs/GDIM%20提示词模版.md)
+- Frontend projects → Also see [`skills/gdim/references/docs/GDIM 提示词模版（前端版）.md`](skills/gdim/references/docs/GDIM%20提示词模版（前端版）.md)
 
 ## What is GDIM?
 
@@ -243,10 +247,10 @@ These skills are designed to be iteratively improved:
 
 ## References
 
-- Full GDIM specification: [`docs/GDIM 规范.md`](docs/GDIM%20规范.md)
-- Quick reference guide: [`docs/GDIM 实践快速指南.md`](docs/GDIM%20实践快速指南.md)
-- Prompt templates: [`docs/GDIM 提示词模版.md`](docs/GDIM%20提示词模版.md)
-- Frontend-specific: [`docs/GDIM 提示词模版（前端版）.md`](docs/GDIM%20提示词模版（前端版）.md)
+- Full GDIM specification: [`skills/gdim/references/docs/GDIM 规范.md`](skills/gdim/references/docs/GDIM%20规范.md)
+- Quick reference guide: [`skills/gdim/references/docs/GDIM 实践快速指南.md`](skills/gdim/references/docs/GDIM%20实践快速指南.md)
+- Prompt templates: [`skills/gdim/references/docs/GDIM 提示词模版.md`](skills/gdim/references/docs/GDIM%20提示词模版.md)
+- Frontend-specific: [`skills/gdim/references/docs/GDIM 提示词模版（前端版）.md`](skills/gdim/references/docs/GDIM%20提示词模版（前端版）.md)
 
 ## Version
 
