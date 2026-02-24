@@ -20,7 +20,7 @@ Then install the plugin:
 /plugin install gdim-workflow@BeMxself-gdim-workflow-skill
 ```
 
-After installation, all `/gdim-*` commands will be available.
+After installation, all `/gdim-*` commands will be available (including `/gdim-auto`, Claude Code only; Codex support is planned).
 
 ### Codex (Skills)
 
@@ -28,7 +28,7 @@ Per Codex skills docs, Codex scans skill folders from:
 - project-level `.agents/skills/` (from current directory up to repo root)
 - user-level `$HOME/.agents/skills/`
 
-Note: the workflow usage examples in this README primarily use Claude Code `/gdim-*` commands; in Codex you can invoke the same skills as `$gdim-*`.
+Note: the workflow usage examples in this README primarily use Claude Code `/gdim-*` commands; in Codex you can invoke the same skills as `$gdim-*`. `/gdim-auto` relies on Claude Code AskUserQuestion/Skill tools and is not supported in Codex yet (support planned).
 
 Option A (Recommended): Install via `$skill-installer` inside Codex
 
@@ -131,6 +131,8 @@ GDIM constrains AI execution through:
 
 ## Quick Start
 
+If you already have a design doc and want automated multi-flow setup, use `/gdim-auto`. See `REFERENCE.md#gdim-auto`.
+
 ### 1. Initialize a Workflow
 
 ```bash
@@ -169,12 +171,38 @@ Each round follows the same cycle:
 - **If gaps exist or Intent incomplete** → `/gdim-scope 2` (next round)
 - **If no High gaps and Intent 100% covered** → `/gdim-final`
 
+## /gdim-auto (Automation)
+
+Use this when you already have a design document and want to split it into multiple GDIM flows and generate a runnable automation environment (Claude Code only; Codex support planned).
+
+Basic usage:
+
+```bash
+/gdim-auto path/to/design-doc.md
+```
+
+It generates:
+- `.ai-workflows/YYYYMMDD-<task-slug>/` (task directory)
+- `config/flows.json`, `00-intent.md`, `intents/*.md`, `run.sh`
+- Syncs public scripts into `automation/ai-coding` (sourced from `skills/gdim-auto/automation-ref`)
+
+Run examples:
+- `.ai-workflows/YYYYMMDD-<task-slug>/run.sh`
+- `./run.sh --only N` / `./run.sh --from N` / `./run.sh --dry-run` / `./run.sh --stage A|B|C`
+
+Dependencies:
+- `claude` CLI, `jq`, `timeout`
+- `mvn` (compile/test gates for Maven projects)
+
+See `REFERENCE.md` for the full `/gdim-auto` guide (includes an example): `REFERENCE.md#gdim-auto`.
+
 ## Available Skills
 
 | Skill | Purpose | When to Use |
 |-------|---------|-------------|
 | `gdim` | Core rules (auto-loaded) | Background knowledge |
 | `gdim-init` | Initialize workflow directory | Starting new GDIM task |
+| `gdim-auto` | Generate multi-flow automation from a design doc (Claude Code only) | When you want automated task + flow setup |
 | `gdim-intent` | Generate Intent document | Defining goals from docs/brainstorming |
 | `gdim-scope` | Define round scope | Starting each round |
 | `gdim-design` | Generate design | After scope is defined |

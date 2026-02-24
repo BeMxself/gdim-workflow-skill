@@ -1,5 +1,13 @@
 # 更新日志
 
+## v1.2.1 - 2026-02-24
+
+### /gdim-auto 自动化执行
+
+- 新增 `/gdim-auto` skill：从设计文档生成多流程自动化任务目录
+- 自动化公共脚本迁移到 `skills/gdim-auto/automation-ref/`（随插件分发）
+- 完善 README/REFERENCE/INSTALL/TESTING/DELIVERY 的 `/gdim-auto` 说明与依赖
+
 ## v1.2.0 - 2026-02-14
 
 ### Codex 技能支持增强

@@ -15,6 +15,180 @@
 - **内容**: 详细模板、设计理念、适用场景
 - **使用**: 学习、参考、定制
 
+<a id="gdim-auto"></a>
+## /gdim-auto 自动化执行
+
+`/gdim-auto` 用于**从设计文档自动生成多流程 GDIM 任务目录**，并提供可直接运行的自动化入口。适用于已有设计文档、希望快速拆解并批量执行 GDIM 流程的场景。
+
+### 支持范围
+- 仅支持 Claude Code（依赖 AskUserQuestion/Skill 工具）。
+- Codex 支持计划中（未来会增强）。
+
+### 运行依赖
+- `claude` CLI（自动化执行入口）
+- `jq`（解析配置与状态）
+- `timeout`（流程超时控制）
+- `mvn`（Maven 项目的编译/测试门禁）
+
+### 基本用法
+
+```bash
+/gdim-auto path/to/design-doc.md
+```
+
+说明：
+- 设计文档路径是**相对于项目根目录**的路径。
+- 自动化脚本的工作副本会同步到 `automation/ai-coding/`。
+- 公共脚本的 source-of-truth 位于 `skills/gdim-auto/automation-ref/`，无需手动修改。
+
+### 生成产物
+生成一个任务目录：`.ai-workflows/YYYYMMDD-<task-slug>/`，包含：
+- `config/flows.json`：流程定义、依赖关系、允许修改路径
+- `00-intent.md`：共享 Intent
+- `intents/*.md`：每个流程的 Intent 片段
+- `run.sh`：自动化入口脚本
+- `state/`、`logs/`：运行状态与日志
+- 每个流程的工作目录（以 flow slug 命名）
+
+### 运行方式
+在项目根目录执行：
+
+```bash
+.ai-workflows/YYYYMMDD-<task-slug>/run.sh
+```
+
+常用参数：
+- `--only N`：只跑第 N 个流程
+- `--from N`：从第 N 个流程开始
+- `--dry-run`：预览流程，不执行
+- `--unblock <slug>`：解除阻塞流程
+- `--stage A|B|C`：覆盖所有流程的执行模式
+- `--skip-clean-check`：跳过工作区干净检查（不推荐）
+
+### 速查表
+
+常用命令：
+
+| 命令 | 说明 |
+|------|------|
+| `.ai-workflows/YYYYMMDD-<task-slug>/run.sh` | 运行全部流程（自动断点恢复） |
+| `./run.sh --dry-run` | 预览流程，不执行 |
+| `./run.sh --only N` | 仅运行第 N 个流程 |
+| `./run.sh --from N` | 从第 N 个流程开始 |
+| `./run.sh --unblock <slug>` | 解除阻塞流程 |
+| `./run.sh --stage A` | 半自动（每轮人工确认） |
+| `./run.sh --stage B` | 全自动（默认） |
+| `./run.sh --stage C` | 收敛阶段（更严格） |
+
+关键产物速查：
+
+| 产物 | 作用 |
+|------|------|
+| `config/flows.json` | 流程定义、依赖、allowed_paths |
+| `00-intent.md` | 项目级 Intent（共享） |
+| `intents/*.md` | 每个流程的 Intent |
+| `run.sh` | 自动化入口脚本 |
+| `state/` | 运行状态（断点恢复） |
+| `logs/` | 运行日志 |
+
+### 执行行为与约束
+- 默认要求 Git 工作区干净（有未提交修改会阻塞）。
+- 每个流程可配置 `allowed_paths`，越界修改会触发阻塞。
+- 默认进行编译/测试门禁（Maven 项目使用 `mvn compile/test -pl ... -am`）。
+- Stage A 需要人工确认继续；Stage B 全自动；Stage C 用于收敛阶段。
+
+### 同步公共脚本（automation/ai-coding）
+首次运行会复制 `sync-automation.sh` 到 `automation/ai-coding/`，随后执行同步检查。
+如发现差异，会提示是否强制同步（覆盖项目侧脚本）。建议保持项目侧与插件版本一致。
+
+### 示例：从设计文档到自动化目录
+
+示例设计文档片段（路径示例：`docs/design/user-profile.md`）：
+
+```text
+# User Profile v1
+
+目标：
+- 用户可查看与编辑个人资料（姓名、头像、简介）
+- 支持头像上传与基础校验
+
+模块：
+- backend/user-profile
+- frontends/web
+
+功能拆解建议：
+- Flow A：后端 API 与数据模型
+- Flow B：前端页面与交互
+```
+
+运行：
+
+```bash
+/gdim-auto docs/design/user-profile.md
+```
+
+生成目录（示例日期：20260224）：
+
+```text
+.ai-workflows/20260224-user-profile/
+├── config/flows.json
+├── 00-intent.md
+├── intents/
+│   ├── 01-profile-api.md
+│   └── 02-profile-ui.md
+├── run.sh
+├── state/
+└── logs/
+```
+
+`config/flows.json` 关键片段（示意）：
+
+```json
+{
+  "project": "user-profile",
+  "workflow_dir": ".ai-workflows/20260224-user-profile",
+  "design_doc": "docs/design/user-profile.md",
+  "flows": [
+    {
+      "id": 1,
+      "slug": "profile-api",
+      "intent_file": "01-profile-api.md",
+      "depends_on": [],
+      "max_rounds": 12,
+      "stage": "B",
+      "modules": ["backend/user-profile"],
+      "allowed_paths": [
+        "backend/user-profile/",
+        ".ai-workflows/20260224-user-profile/profile-api/",
+        ".ai-workflows/20260224-user-profile/00-intent.md"
+      ]
+    },
+    {
+      "id": 2,
+      "slug": "profile-ui",
+      "intent_file": "02-profile-ui.md",
+      "depends_on": [1],
+      "max_rounds": 12,
+      "stage": "B",
+      "modules": ["frontends/web"],
+      "allowed_paths": [
+        "frontends/web/",
+        ".ai-workflows/20260224-user-profile/profile-ui/",
+        ".ai-workflows/20260224-user-profile/00-intent.md"
+      ]
+    }
+  ]
+}
+```
+
+常用运行命令（示例）：
+
+```bash
+.ai-workflows/20260224-user-profile/run.sh
+./run.sh --only 1
+./run.sh --dry-run
+```
+
 ## 何时查阅规范文档
 
 ### 1. 学习 GDIM

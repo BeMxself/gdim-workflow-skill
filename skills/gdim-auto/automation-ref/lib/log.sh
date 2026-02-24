@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Structured logging for GDIM automation
-# Usage: source automation/lib/log.sh
+# Usage: source automation/ai-coding/lib/log.sh
 
 if [ -n "${GDIM_LOG_DIR:-}" ]; then
     readonly LOG_DIR="$GDIM_LOG_DIR"

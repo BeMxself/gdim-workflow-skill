@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # State file read/write for GDIM automation (requires jq)
-# Usage: source automation/lib/state.sh
+# Usage: source automation/ai-coding/lib/state.sh
 
 if [ -n "${GDIM_STATE_DIR:-}" ]; then
     readonly STATE_DIR="$GDIM_STATE_DIR"

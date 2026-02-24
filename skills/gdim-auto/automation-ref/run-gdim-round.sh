@@ -4,7 +4,7 @@ set -euo pipefail
 # Level 2: GDIM Round Dispatcher
 # Runs iterative GDIM rounds for a single flow until gaps are closed or limits hit.
 #
-# Usage: ./automation/run-gdim-round.sh \
+# Usage: ./automation/ai-coding/run-gdim-round.sh \
 #          --flow-slug SLUG --max-rounds N \
 #          --workflow-dir DIR --intent-file FILE \
 #          --design-doc DOC --modules MODS \

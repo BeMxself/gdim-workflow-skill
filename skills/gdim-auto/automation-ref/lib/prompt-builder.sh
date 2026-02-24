@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Prompt builder: assembles per-round prompts from templates
-# Usage: source automation/lib/prompt-builder.sh
+# Usage: source automation/ai-coding/lib/prompt-builder.sh
 
 build_prompt() {
     local template_file="$1"

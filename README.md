@@ -20,7 +20,7 @@
 /plugin install gdim-workflow@BeMxself-gdim-workflow-skill
 ```
 
-安装完成后，所有 `/gdim-*` 命令即可使用。
+安装完成后，所有 `/gdim-*` 命令即可使用（包含 `/gdim-auto`，仅 Claude Code；Codex 支持计划中）。
 
 ### Codex（Skills）
 
@@ -28,7 +28,7 @@
 - 项目级 `.agents/skills/`（从当前目录向上到仓库根目录）
 - 用户级 `$HOME/.agents/skills/`
 
-说明：本文后续的工作流“使用示例”默认以 Claude Code 的 `/gdim-*` 命令为主；在 Codex 中可用 `$gdim-*` 调用同名 skills。
+说明：本文后续的工作流“使用示例”默认以 Claude Code 的 `/gdim-*` 命令为主；在 Codex 中可用 `$gdim-*` 调用同名 skills。注意：`/gdim-auto` 依赖 Claude Code 的 AskUserQuestion/Skill 工具，当前不支持 Codex（后续会增强支持）。
 
 方式 A（推荐）：在 Codex 内使用 `$skill-installer` 从 GitHub 安装
 
@@ -131,6 +131,8 @@ GDIM 通过以下方式约束 AI 的执行：
 
 ## 快速开始
 
+如果你已有设计文档并希望自动拆解为多流程任务，可直接使用 `/gdim-auto`，详见 `REFERENCE.md#gdim-auto`。
+
 ### 1) 初始化一个工作流
 
 ```bash
@@ -169,12 +171,38 @@ GDIM 通过以下方式约束 AI 的执行：
 - **存在 Gap 或 Intent 未完成** → `/gdim-scope 2`（进入下一轮）
 - **没有 High 级 Gap 且 Intent 100% 覆盖** → `/gdim-final`
 
+## /gdim-auto（自动化执行）
+
+当你已有设计文档，希望自动拆解为多条 GDIM 流程并生成可执行环境时使用（仅 Claude Code；Codex 支持计划中）。
+
+基本用法：
+
+```bash
+/gdim-auto path/to/design-doc.md
+```
+
+它会生成：
+- `.ai-workflows/YYYYMMDD-<task-slug>/`（任务目录）
+- `config/flows.json`、`00-intent.md`、`intents/*.md`、`run.sh`
+- 同步公共脚本到 `automation/ai-coding`（来源为 `skills/gdim-auto/automation-ref`）
+
+运行方式（示例）：
+- `.ai-workflows/YYYYMMDD-<task-slug>/run.sh`
+- `./run.sh --only N` / `./run.sh --from N` / `./run.sh --dry-run` / `./run.sh --stage A|B|C`
+
+依赖：
+- `claude` CLI、`jq`、`timeout`
+- `mvn`（用于 Maven 项目的编译/测试门禁）
+
+完整说明请见 `REFERENCE.md` 的 `/gdim-auto` 章节（含示例）：`REFERENCE.md#gdim-auto`。
+
 ## 可用 Skills
 
 | Skill | 用途 | 何时使用 |
 |------|------|---------|
 | `gdim` | 核心规则（自动加载） | 作为背景约束 |
 | `gdim-init` | 初始化工作流目录 | 新建 GDIM 任务 |
+| `gdim-auto` | 从设计文档生成多流程自动化环境（仅 Claude Code） | 已有设计文档、希望自动生成任务与流程 |
 | `gdim-intent` | 生成 Intent 文档 | 从文档/头脑风暴提炼目标 |
 | `gdim-scope` | 定义本轮 scope | 每一轮开始时 |
 | `gdim-design` | 生成设计文档 | scope 确认后 |

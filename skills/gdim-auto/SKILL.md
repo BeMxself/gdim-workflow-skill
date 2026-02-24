@@ -24,15 +24,17 @@ argument: "<design-doc-path>"
 在执行任何操作前，先确定两个关键路径：
 
 - **PROJECT_ROOT**: 当前工作目录（即用户运行 Claude Code 的项目根目录）
-- **PLUGIN_DIR**: 本 skill 所在的插件目录。通过以下方式定位：
+- **SKILL_DIR**: 本 skill 所在目录。通过以下方式定位：
   ```bash
-  # 查找插件目录（包含本 SKILL.md 的上两级）
-  PLUGIN_DIR=$(find ~/.claude/plugins -type d -name "BeMxself-gdim-workflow-skill" 2>/dev/null | head -1)
+  # 查找本 skill 的 SKILL.md，然后取其父目录
+  SKILL_FILE=$(find ~/.claude/plugins -type f -path "*/skills/gdim-auto/SKILL.md" 2>/dev/null | head -1)
+  [ -z "$SKILL_FILE" ] && echo "SKILL.md not found, check plugin install" && exit 1
+  SKILL_DIR="$(cd "$(dirname "$SKILL_FILE")" && pwd)"
   ```
   如果找不到，提示用户检查插件安装。
 
 由此得出：
-- **REFERENCE_DIR**: `${PLUGIN_DIR}/automation-ref` — 公共脚本的 source-of-truth
+- **REFERENCE_DIR**: `${SKILL_DIR}/automation-ref` — 公共脚本的 source-of-truth
 - **TARGET_DIR**: `${PROJECT_ROOT}/automation/ai-coding` — 项目中的公共脚本工作副本
 
 ### Step 1: 同步公共脚本
@@ -41,14 +43,14 @@ argument: "<design-doc-path>"
 - 不存在 → 用 Bash 工具从 REFERENCE_DIR 拷贝：
   ```bash
   mkdir -p automation/ai-coding
-  cp "${PLUGIN_DIR}/automation-ref/sync-automation.sh" automation/ai-coding/sync-automation.sh
+  cp "${REFERENCE_DIR}/sync-automation.sh" automation/ai-coding/sync-automation.sh
   chmod +x automation/ai-coding/sync-automation.sh
   ```
 
 然后用 Bash 工具运行同步检查：
 
 ```bash
-bash automation/ai-coding/sync-automation.sh "${PLUGIN_DIR}/automation-ref" automation/ai-coding
+bash automation/ai-coding/sync-automation.sh "${REFERENCE_DIR}" automation/ai-coding
 ```
 
 根据输出和退出码处理：
@@ -59,7 +61,7 @@ bash automation/ai-coding/sync-automation.sh "${PLUGIN_DIR}/automation-ref" auto
   - 选项：「强制同步」/「跳过，使用现有版本」
   - 用户选择强制同步 → 用 Bash 工具重新运行：
     ```bash
-    bash automation/ai-coding/sync-automation.sh "${PLUGIN_DIR}/automation-ref" automation/ai-coding --auto-copy
+    bash automation/ai-coding/sync-automation.sh "${REFERENCE_DIR}" automation/ai-coding --auto-copy
     ```
     这会将参考副本强制拷贝覆盖到项目中
   - 用户选择跳过 → 继续（使用现有脚本，可能存在版本差异）

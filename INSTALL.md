@@ -21,6 +21,7 @@
 重启 Claude Code 后，输入 `/` 应该能看到：
 
 - `/gdim-init`
+- `/gdim-auto`
 - `/gdim-intent`
 - `/gdim-scope`
 - `/gdim-design`
@@ -39,6 +40,8 @@ gdim-workflow/
 ├── skills/                      # Skills 目录
 │   ├── gdim/SKILL.md            # 核心规则（自动加载）
 │   ├── gdim-init/SKILL.md
+│   ├── gdim-auto/SKILL.md
+│   ├── gdim-auto/automation-ref/ # /gdim-auto 公共脚本模板
 │   ├── gdim-intent/SKILL.md
 │   ├── gdim-scope/SKILL.md
 │   ├── gdim-design/SKILL.md
@@ -66,6 +69,7 @@ gdim-workflow/
 这个 plugin 是完全自包含的：
 - 包含所有 GDIM 规范文档（`skills/gdim/references/docs/` 目录）
 - 包含所有可执行 skills（`skills/` 目录）
+- 包含 `/gdim-auto` 所需的公共脚本与模板（`skills/gdim-auto/automation-ref/`）
 - 包含使用指南和测试文档
 - 无需依赖外部文件
 

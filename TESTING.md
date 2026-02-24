@@ -4,6 +4,13 @@
 
 This document helps you test the GDIM skills to ensure they work as intended.
 
+## Prerequisites
+
+- `claude` CLI available in PATH
+- `jq` installed
+- `timeout` available
+- `mvn` installed if you want compile/test gates for Maven modules
+
 ## Test Scenarios
 
 ### Scenario 1: Scope Overload Test
@@ -85,6 +92,22 @@ This document helps you test the GDIM skills to ensure they work as intended.
 - **Red flag**: If decides unilaterally → skill failed
 
 **Pass criteria**: Exit logic follows rules exactly
+
+---
+
+### Scenario 6: /gdim-auto Automation Setup Test
+
+**Goal**: Verify `/gdim-auto` generates a runnable automation workspace from a design doc
+
+**Steps**:
+1. Prepare a design document path relative to project root
+2. Run `/gdim-auto path/to/design-doc.md`
+3. **Expected**: `.ai-workflows/YYYYMMDD-<task-slug>/` created with `config/flows.json`, `00-intent.md`, `intents/`, `run.sh`, `state/`, `logs/`
+4. **Expected**: `automation/ai-coding/` exists and contains synced public scripts
+5. Run `.ai-workflows/YYYYMMDD-<task-slug>/run.sh --dry-run`
+6. **Expected**: Dry-run completes without path or missing-file errors
+
+**Pass criteria**: Task directory + automation scripts are generated and dry-run works
 
 ---
 

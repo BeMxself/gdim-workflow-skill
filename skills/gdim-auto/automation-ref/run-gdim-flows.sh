@@ -4,7 +4,7 @@ set -euo pipefail
 # Level 1: GDIM Flow Dispatcher
 # Orchestrates multiple GDIM flows in dependency order.
 #
-# Usage: ./automation/run-gdim-flows.sh --task-dir DIR [--from N] [--only N] [--dry-run]
+# Usage: ./automation/ai-coding/run-gdim-flows.sh --task-dir DIR [--from N] [--only N] [--dry-run]
 # Exit codes: 0=all done, 1=blocked, 2=max rounds, 3=stalled
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

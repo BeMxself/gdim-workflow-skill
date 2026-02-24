@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Quality gates for GDIM automation
-# Usage: source automation/lib/validate.sh
+# Usage: source automation/ai-coding/lib/validate.sh
 #
 # After run_quality_gates, check:
 #   VALIDATE_RESULT  — human-readable report

@@ -19,6 +19,14 @@
 
 **总计**: 5,268 词
 
+### 1b. 自动化 Skill（1个）
+
+| Skill | 用途 | 词数 | 状态 |
+|------|------|------|------|
+| `gdim-auto` | 从设计文档生成多流程自动化环境（Claude Code） | 606 | ✅ |
+
+**说明**：该 skill 不计入“核心 Skills（10个）”的词数统计。
+
 ### 2. 支持文档
 
 - `README.md` - 完整使用指南（含规范文档关系说明）
@@ -150,6 +158,8 @@ description: Use when defining scope - creates In Scope, Out of Scope, and Defer
 /gdim-final        # 如果完成
 ```
 
+可选：已有设计文档时可直接使用 `/gdim-auto <design-doc-path>` 生成自动化任务目录与流程。
+
 ## 测试建议
 
 使用 `TESTING.md` 中的 5 个场景测试：
@@ -182,6 +192,8 @@ description: Use when defining scope - creates In Scope, Out of Scope, and Defer
 ```
 /Users/songmingxu/Projects/AI_Asset/.claude/skills/
 ├── gdim/SKILL.md
+├── gdim-auto/SKILL.md
+├── gdim-auto/automation-ref/       # /gdim-auto 公共脚本模板
 ├── gdim/references/docs/              # 完整规范文档（已复制）
 │   ├── GDIM 规范.md
 │   ├── GDIM 实践快速指南.md
