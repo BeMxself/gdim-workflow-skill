@@ -221,3 +221,4 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
 - Intent 文件应该足够详细，让自动化 agent 能独立完成每个流程
 - 如果设计文档内容不足以拆解为多个流程，可以只生成一个流程
 - 生成的所有文件使用 UTF-8 编码
+- 不要自动执行工作流；只输出启动指引，后续由用户在终端手动运行
