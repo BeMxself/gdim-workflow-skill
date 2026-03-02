@@ -96,7 +96,7 @@ RETRY_COMPILE=$(jq -r '.retry_limits.compile_failed // 2' "$CONFIG_FILE" 2>/dev/
 RETRY_TEST=$(jq -r '.retry_limits.test_failed // 2' "$CONFIG_FILE" 2>/dev/null || echo 2)
 RETRY_MALFORMED=$(jq -r '.retry_limits.malformed_output // 1' "$CONFIG_FILE" 2>/dev/null || echo 1)
 
-RUNNER="$(jq -r '.execution.runner // "claude"' "$CONFIG_FILE" 2>/dev/null || echo "claude")"
+RUNNER="$(jq -r '.execution.runner // .executor // "claude"' "$CONFIG_FILE" 2>/dev/null || echo "claude")"
 if [ -n "$RUNNER_OVERRIDE" ]; then
     RUNNER="$RUNNER_OVERRIDE"
 fi

@@ -26,6 +26,12 @@
 - `skills/gdim-auto/SKILL.md` 的路径定位改为“自动发现”：
   - 不再硬编码 `~/.claude/plugins`
   - 支持按当前 agent 环境从 `.claude/.agents/.kiro` 等目录解析 skill 位置
+- 修复 `sync-automation.sh`：
+  - 目标目录缺失文件默认自动复制（不再仅报 `[MISS]`）
+  - 仅对内容差异文件（`[DIFF]`）保留人工确认/`--auto-copy` 覆盖流程
+- 增加执行器字段兼容：
+  - 顶层 `executor` 兼容映射到 `execution.runner`
+  - `flows[].executor` 兼容映射到 `flows[].runner`
 
 ## v1.2.2 - 2026-02-24
 

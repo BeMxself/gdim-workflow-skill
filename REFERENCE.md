@@ -68,6 +68,10 @@
 - `--runner-cmd '<cmd>'`：覆盖执行器命令（stdin 接收 prompt）
 - `--kiro-agent <name>`：指定 Kiro agent
 
+兼容说明：
+- 配置文件推荐使用 `execution.runner` 与 `flows[].runner`
+- 为兼容旧任务，仍支持别名字段 `executor`（顶层）与 `flows[].executor`
+
 ### 速查表
 
 常用命令：

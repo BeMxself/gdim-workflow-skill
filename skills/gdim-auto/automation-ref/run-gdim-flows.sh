@@ -117,7 +117,7 @@ for (( i=0; i<FLOW_COUNT; i++ )); do
     depends_on=$(jq -r ".flows[$i].depends_on | map(tostring) | join(\",\")" "$CONFIG_FILE")
     allowed_paths=$(jq -r ".flows[$i].allowed_paths | join(\",\")" "$CONFIG_FILE")
     flow_stage=$(jq -r ".flows[$i].stage // \"B\"" "$CONFIG_FILE")
-    flow_runner=$(jq -r ".flows[$i].runner // empty" "$CONFIG_FILE")
+    flow_runner=$(jq -r ".flows[$i].runner // .flows[$i].executor // empty" "$CONFIG_FILE")
     flow_runner_cmd=$(jq -r ".flows[$i].runner_cmd // empty" "$CONFIG_FILE")
     flow_kiro_agent=$(jq -r ".flows[$i].kiro_agent // empty" "$CONFIG_FILE")
 

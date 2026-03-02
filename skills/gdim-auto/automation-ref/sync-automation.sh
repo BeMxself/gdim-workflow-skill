@@ -5,7 +5,7 @@
 #
 # Usage: sync-automation.sh <reference-dir> <target-dir> [--auto-copy]
 #
-# Exit codes: 0=all in sync, 1=differences found
+# Exit codes: 0=all in sync (or missing files auto-copied), 1=differences found
 # Output: one line per file with status [OK], [COPY], [DIFF], [WARN]
 set -euo pipefail
 
@@ -50,15 +50,10 @@ for f in "${FILES[@]}"; do
     fi
 
     if [ ! -f "$target" ]; then
-        if [ "$AUTO_COPY" = "--auto-copy" ]; then
-            mkdir -p "$(dirname "$target")"
-            cp "$source" "$target"
-            [ -x "$source" ] && chmod +x "$target"
-            echo "[COPY] $f (created)"
-        else
-            echo "[MISS] $f (does not exist in target)"
-            NEED_CONFIRM=1
-        fi
+        mkdir -p "$(dirname "$target")"
+        cp "$source" "$target"
+        [ -x "$source" ] && chmod +x "$target"
+        echo "[COPY] $f (created)"
     elif ! diff -q "$target" "$source" >/dev/null 2>&1; then
         if [ "$AUTO_COPY" = "--auto-copy" ]; then
             cp "$source" "$target"

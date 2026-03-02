@@ -101,9 +101,9 @@ bash automation/ai-coding/sync-automation.sh "${REFERENCE_DIR}" automation/ai-co
 
 根据输出和退出码处理：
 
-- **退出码 0**：所有脚本一致，继续 Step 2
-- **退出码 1**：有不一致或缺失的文件。将脚本输出中的 `[DIFF]` 和 `[MISS]` 行展示给用户，然后用 **AskUserQuestion** 询问：
-  - "以下公共脚本与插件参考版本不一致：\n{列出 DIFF/MISS 文件}\n是否强制同步（用插件版本覆盖项目中的副本）？"
+- **退出码 0**：所有脚本一致，或缺失文件已自动补齐，继续 Step 2
+- **退出码 1**：有已存在文件与参考版本不一致（`[DIFF]`）。将 `[DIFF]` 行展示给用户，然后用 **AskUserQuestion** 询问：
+  - "以下公共脚本与插件参考版本不一致：\n{列出 DIFF 文件}\n是否强制同步（用插件版本覆盖项目中的副本）？"
   - 选项：「强制同步」/「跳过，使用现有版本」
   - 用户选择强制同步 → 用 Bash 工具重新运行：
     ```bash
@@ -283,6 +283,7 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
 
 - 不要修改 `automation/ai-coding/` 下的公共脚本内容（除非 sync 检测到需要更新）
 - `flows.json` 中的 `allowed_paths` 必须包含流程的工作流目录和涉及的模块目录
+- 执行器配置建议使用 `execution.runner` 与 `flows[].runner`；旧字段 `executor` 与 `flows[].executor` 仍可兼容读取
 - Intent 文件应该足够详细，让自动化 agent 能独立完成每个流程
 - 当 runner=kiro 时，运行前会自动检查并确保存在 `gdim-kiro-opus` 与 `gdim-kiro-sonnet` 两个 agent（包含 gdim skills 资源）
 - 如果设计文档内容不足以拆解为多个流程，可以只生成一个流程

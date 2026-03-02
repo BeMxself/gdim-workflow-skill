@@ -13,12 +13,12 @@ runner_command_from_config() {
 
 runner_kiro_agent_from_config() {
   local config_file="$1"
-  jq -er '.execution.kiro_agent // .runners.kiro.agent // empty' "$config_file" 2>/dev/null || true
+  jq -er '.execution.kiro_agent // .kiro_agent // .runners.kiro.agent // empty' "$config_file" 2>/dev/null || true
 }
 
 runner_preferred_model_from_config() {
   local config_file="$1"
-  jq -er '.execution.kiro_model // empty' "$config_file" 2>/dev/null || true
+  jq -er '.execution.kiro_model // .kiro_model // empty' "$config_file" 2>/dev/null || true
 }
 
 validate_kiro_agent_file_tools() {
