@@ -213,6 +213,13 @@ get_phase_status() {
         '.phases[$r][$p] // "todo"' "$(round_state_file "$slug")"
 }
 
+# Returns success when a round has phase checkpoint data.
+has_phase_checkpoint() {
+    local slug="$1" round="$2"
+    _ensure_jq
+    jq -e --arg r "R${round}" '.phases[$r] != null' "$(round_state_file "$slug")" >/dev/null 2>&1
+}
+
 # Get summary of all phases for a round (for logging)
 get_phase_summary() {
     local slug="$1" round="$2"

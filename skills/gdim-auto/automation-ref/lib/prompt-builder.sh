@@ -13,6 +13,7 @@ build_prompt() {
     local modules="$8"
     local progress_file="$9"
     local prev_gaps_file="${10}"
+    local resume_phase="${11:-}"
 
     if [ ! -f "$template_file" ]; then
         echo "ERROR: Template file not found: $template_file" >&2
@@ -53,7 +54,15 @@ build_prompt() {
     local workflow_base
     workflow_base=$(dirname "$workflow_dir")
     local round_task
-    if [ "$round" -eq 1 ]; then
+    if [ -n "$resume_phase" ]; then
+        local resume_cmd="/gdim-${resume_phase} ${round}"
+        if [ "$resume_phase" = "gap" ]; then
+            resume_cmd="/gdim-gap ${round}"
+        fi
+        round_task="1. 检测到本轮已有阶段产物，按 phase 断点恢复，不要重做已通过阶段。
+2. 从 ${resume_cmd} 开始，仅补齐未完成阶段。
+3. 继续执行后续阶段，直到完成 /gdim-gap ${round}。"
+    elif [ "$round" -eq 1 ]; then
         round_task="1. 共享 Intent 已存在于 ${workflow_base}/00-intent.md，无需重建。如果本流程目录下没有 00-intent.md，创建一个符号链接或副本指向共享 Intent。
 2. 调用 /gdim-scope 定义 R1 Scope（≤3 scope items, ≤3 core classes）
 3. 依次调用 /gdim-design → /gdim-plan → /gdim-execute → /gdim-summary → /gdim-gap 完成全流程"

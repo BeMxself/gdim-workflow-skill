@@ -105,6 +105,7 @@
 - 每个流程可配置 `allowed_paths`，越界修改会触发阻塞。
 - 默认进行编译/测试门禁（Maven 项目使用 `mvn compile/test -pl ... -am`）。
 - Stage A 需要人工确认继续；Stage B 全自动；Stage C 用于收敛阶段。
+- 默认支持断点恢复：已完成 flow 会跳过；未完成 flow 会优先按 round 恢复，并在同一 round 内按 phase 粒度恢复（从首个未通过 phase 继续）。
 - 当执行器为 `kiro` 时，会先自动检查并确保存在 `gdim-kiro-opus` 与 `gdim-kiro-sonnet` 两个 agent（包含 gdim skill 资源）。
 
 ### 同步公共脚本（automation/ai-coding）

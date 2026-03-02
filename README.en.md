@@ -321,4 +321,4 @@ These skills are designed to be iteratively improved:
 
 ## Version
 
-**v1.2.3** - Multi-executor automation (claude/codex/kiro/custom) with dual Kiro agent precheck
+**v1.3.0** - Multi-executor automation with phase-granular checkpoint resume

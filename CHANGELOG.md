@@ -1,6 +1,6 @@
 # 更新日志
 
-## v1.2.3 - 2026-03-02
+## v1.3.0 - 2026-03-02
 
 ### /gdim-auto 多执行器支持
 
@@ -32,6 +32,8 @@
 - 增加执行器字段兼容：
   - 顶层 `executor` 兼容映射到 `execution.runner`
   - `flows[].executor` 兼容映射到 `flows[].runner`
+- 默认恢复粒度升级为 phase 级：
+  - 同一轮次重跑时，若已存在 phase checkpoint，会从首个未通过 phase 继续（而非整轮从头）
 
 ## v1.2.2 - 2026-02-24
 

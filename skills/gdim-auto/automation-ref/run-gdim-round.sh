@@ -291,6 +291,24 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
     log_info "--- Round R${round} for ${FLOW_SLUG} ---"
     set_round_field "$FLOW_SLUG" "current_round" "$round"
 
+    # Phase-granular checkpoint resume:
+    # If this round already has phase state, continue from first non-passed phase.
+    resume_phase=""
+    if has_phase_checkpoint "$FLOW_SLUG" "$round"; then
+        for _phase in scope design plan execute summary gap; do
+            _status=$(get_phase_status "$FLOW_SLUG" "$round" "$_phase")
+            if [ "$_status" != "passed" ]; then
+                resume_phase="$_phase"
+                break
+            fi
+        done
+        if [ -n "$resume_phase" ]; then
+            log_info "Phase-resume checkpoint for R${round}: start from ${resume_phase}"
+        else
+            log_info "Phase-resume checkpoint for R${round}: all phases passed"
+        fi
+    fi
+
     # Audit: record start time + baseline commit for path whitelist
     round_start=$(date '+%Y-%m-%dT%H:%M:%S')
     set_round_field "$FLOW_SLUG" "startAt" "\"${round_start}\""
@@ -316,7 +334,8 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         "$WORKFLOW_DIR" \
         "$MODULES" \
         "$local_progress" \
-        "$prev_gap_file")
+        "$prev_gap_file" \
+        "$resume_phase")
 
     if [ "$DRY_RUN" -eq 1 ]; then
         log_info "[DRY-RUN] Would send prompt (${#prompt} chars) to runner=${RUNNER}"
