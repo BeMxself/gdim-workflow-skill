@@ -3,10 +3,10 @@
 ## Skills vs 规范文档的关系
 
 ### Skills（本目录）
-- **目的**: 在 Claude Code 中快速执行 GDIM 工作流
+- **目的**: 在 Claude/Codex/Kiro 中快速执行 GDIM 工作流
 - **优化**: Token 效率、快速查找、可执行性
 - **内容**: 核心规则、红旗清单、快速参考表
-- **使用**: `/gdim-*` 命令调用
+- **使用**: Claude 用 `/gdim-*`，Codex 用 `$gdim-*`，kiro-cli 在对话中显式点名 `gdim-*` skill
 - **Codex 支持**: 每个 skill 均包含 `agents/openai.yaml`，用于 Codex 的技能展示与触发提示
 
 ### 规范文档（skills/gdim/references/docs/ 子目录）
@@ -21,8 +21,8 @@
 `/gdim-auto` 用于**从设计文档自动生成多流程 GDIM 任务目录**，并提供可直接运行的自动化入口。适用于已有设计文档、希望快速拆解并批量执行 GDIM 流程的场景。
 
 ### 支持范围
-- `/gdim-auto` 命令本身仅支持 Claude Code（依赖 AskUserQuestion/Skill 工具）。
-- 由 `/gdim-auto` 生成的自动化脚本可在终端运行，并支持多执行器：`claude` / `codex` / `kiro` / 自定义命令。
+- `gdim-auto` skill 支持在 Claude/Codex/kiro-cli 触发（触发方式见下）。
+- 由 `gdim-auto` 生成的自动化脚本可在终端运行，并支持多执行器：`claude` / `codex` / `kiro` / 自定义命令。
 
 ### 运行依赖
 - `claude` / `codex` / `kiro-cli`（按所选执行器需要）
@@ -33,8 +33,14 @@
 ### 基本用法
 
 ```bash
+# Claude Code
 /gdim-auto path/to/design-doc.md
+
+# Codex
+$gdim-auto path/to/design-doc.md
 ```
+
+kiro-cli：在对话中明确要求 agent 使用 `gdim-auto` skill，并给出设计文档路径。
 
 说明：
 - 设计文档路径是**相对于项目根目录**的路径。
@@ -102,10 +108,12 @@
 
 ### 执行行为与约束
 - 默认要求 Git 工作区干净（有未提交修改会阻塞）。
-- 每个流程可配置 `allowed_paths`，越界修改会触发阻塞。
+- 每个流程可配置 `allowed_paths`。出现 `path_violation` 时，默认会自动扩展 `allowed_paths`（按越界文件目录前缀）并继续执行。
 - 默认进行编译/测试门禁（Maven 项目使用 `mvn compile/test -pl ... -am`）。
 - Stage A 需要人工确认继续；Stage B 全自动；Stage C 用于收敛阶段。
 - 默认支持断点恢复：已完成 flow 会跳过；未完成 flow 会优先按 round 恢复，并在同一 round 内按 phase 粒度恢复（从首个未通过 phase 继续）。
+- 若同一 round 的 phase checkpoint 显示全部 phase 已通过，则会跳过 runner，直接从 quality gates 继续。
+- `state/<flow>/round-state.json` 会记录细颗粒度事件（`events` / `last_event`），可用于定位恢复点与执行阶段。
 - 当执行器为 `kiro` 时，会先自动检查并确保存在 `gdim-kiro-opus` 与 `gdim-kiro-sonnet` 两个 agent（包含 gdim skill 资源）。
 
 ### 同步公共脚本（automation/ai-coding）

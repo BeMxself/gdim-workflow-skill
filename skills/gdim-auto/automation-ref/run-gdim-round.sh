@@ -33,6 +33,8 @@ TASK_DIR=""
 RUNNER_OVERRIDE=""
 RUNNER_CMD_OVERRIDE=""
 KIRO_AGENT_OVERRIDE=""
+HEARTBEAT_SECONDS_RAW="${GDIM_HEARTBEAT_SECONDS:-20}"
+HEARTBEAT_SECONDS=20
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -79,6 +81,12 @@ source "$SCRIPT_DIR/lib/prompt-builder.sh"
 source "$SCRIPT_DIR/lib/runner.sh"
 
 export CURRENT_FLOW="$FLOW_SLUG"
+
+if [[ "$HEARTBEAT_SECONDS_RAW" =~ ^[0-9]+$ ]]; then
+    HEARTBEAT_SECONDS="$HEARTBEAT_SECONDS_RAW"
+else
+    log_info "Invalid GDIM_HEARTBEAT_SECONDS=${HEARTBEAT_SECONDS_RAW}, fallback to 20s"
+fi
 
 # Stall threshold: Stage C is tighter (1 round), others 2
 STALL_LIMIT=2
@@ -184,16 +192,115 @@ invoke_runner() {
     local log_file="$2"
     local prompt_file=""
     local exit_code=0
+    local runner_pid=0
+    local elapsed=0
+    local next_heartbeat=0
 
     mkdir -p "$(dirname "$log_file")"
     prompt_file="$(mktemp)"
     printf "%s" "$prompt_text" >"$prompt_file"
 
     log_info "Invoking runner=${RUNNER} (timeout=${TIMEOUT_MINUTES}m)..."
-    run_runner "$RUNNER" "$prompt_file" "$log_file" "$TIMEOUT_MINUTES" "$PROJECT_ROOT" "$RUNNER_CMD" "$KIRO_AGENT" || exit_code=$?
+    append_round_event "$FLOW_SLUG" "${CURRENT_ROUND:-0}" "runner_invoking" "runner=${RUNNER};timeout=${TIMEOUT_MINUTES}m"
+    run_runner "$RUNNER" "$prompt_file" "$log_file" "$TIMEOUT_MINUTES" "$PROJECT_ROOT" "$RUNNER_CMD" "$KIRO_AGENT" &
+    runner_pid=$!
+
+    if [ "$HEARTBEAT_SECONDS" -gt 0 ]; then
+        next_heartbeat="$HEARTBEAT_SECONDS"
+        while kill -0 "$runner_pid" 2>/dev/null; do
+            sleep 1
+            if kill -0 "$runner_pid" 2>/dev/null; then
+                elapsed=$((elapsed + 1))
+                if [ "$elapsed" -ge "$next_heartbeat" ]; then
+                    next_heartbeat=$((next_heartbeat + HEARTBEAT_SECONDS))
+                    log_info "Runner still running... elapsed=${elapsed}s"
+                fi
+            fi
+        done
+    fi
+
+    wait "$runner_pid" || exit_code=$?
+    if [ "$exit_code" -eq 0 ]; then
+        append_round_event "$FLOW_SLUG" "${CURRENT_ROUND:-0}" "runner_completed" "runner=${RUNNER}"
+    else
+        append_round_event "$FLOW_SLUG" "${CURRENT_ROUND:-0}" "runner_failed" "runner=${RUNNER};exit=${exit_code}"
+    fi
 
     rm -f "$prompt_file"
     return $exit_code
+}
+
+# --- Helper: path whitelist auto-expand ---
+_trim_spaces() {
+    local value="$1"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    printf "%s" "$value"
+}
+
+_csv_contains_item() {
+    local csv="$1"
+    local item="$2"
+    local entry=""
+    IFS=',' read -ra entries <<< "$csv"
+    for entry in "${entries[@]}"; do
+        entry=$(_trim_spaces "$entry")
+        [ -z "$entry" ] && continue
+        [ "$entry" = "$item" ] && return 0
+    done
+    return 1
+}
+
+_extract_path_violation_files() {
+    local validate_result="$1"
+    printf '%b' "$validate_result" | awk '
+        /^\[FAIL\] path whitelist/ { in_block = 1; next }
+        in_block == 1 {
+            if ($0 ~ /^\[(PASS|FAIL|MISS|WARN|SKIP)\]/) { in_block = 0; next }
+            if ($0 ~ /^[[:space:]]+/) {
+                sub(/^[[:space:]]+/, "", $0)
+                if (length($0) > 0) print $0
+            }
+        }
+    '
+}
+
+PATH_EXPAND_ADDITIONS=""
+PATH_EXPANDED_ALLOWED_PATHS=""
+expand_allowed_paths_for_path_violation() {
+    local current_paths="$1"
+    local validate_result="$2"
+    local updated_paths="$current_paths"
+    local additions=""
+    local file=""
+    local path_prefix=""
+
+    PATH_EXPAND_ADDITIONS=""
+
+    while IFS= read -r file; do
+        file=$(_trim_spaces "$file")
+        [ -z "$file" ] && continue
+        path_prefix="$file"
+        if [[ "$file" == */* ]]; then
+            path_prefix="${file%/*}/"
+        fi
+
+        if ! _csv_contains_item "$updated_paths" "$path_prefix"; then
+            if [ -n "$updated_paths" ]; then
+                updated_paths="${updated_paths},${path_prefix}"
+            else
+                updated_paths="${path_prefix}"
+            fi
+            if [ -n "$additions" ]; then
+                additions="${additions},${path_prefix}"
+            else
+                additions="${path_prefix}"
+            fi
+        fi
+    done < <(_extract_path_violation_files "$validate_result")
+
+    PATH_EXPAND_ADDITIONS="$additions"
+    PATH_EXPANDED_ALLOWED_PATHS="$updated_paths"
 }
 
 # --- Helper: detect if TTY is actually usable (not just exists) ---
@@ -290,10 +397,12 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
     export CURRENT_ROUND="$round"
     log_info "--- Round R${round} for ${FLOW_SLUG} ---"
     set_round_field "$FLOW_SLUG" "current_round" "$round"
+    append_round_event "$FLOW_SLUG" "$round" "round_started" "stage=${STAGE};max_rounds=${MAX_ROUNDS}"
 
     # Phase-granular checkpoint resume:
     # If this round already has phase state, continue from first non-passed phase.
     resume_phase=""
+    resume_skip_runner=0
     if has_phase_checkpoint "$FLOW_SLUG" "$round"; then
         for _phase in scope design plan execute summary gap; do
             _status=$(get_phase_status "$FLOW_SLUG" "$round" "$_phase")
@@ -305,7 +414,10 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         if [ -n "$resume_phase" ]; then
             log_info "Phase-resume checkpoint for R${round}: start from ${resume_phase}"
         else
+            resume_skip_runner=1
             log_info "Phase-resume checkpoint for R${round}: all phases passed"
+            log_info "Skipping runner due phase checkpoint and resuming from quality gates"
+            append_round_event "$FLOW_SLUG" "$round" "runner_skipped_by_resume" "reason=all_phases_passed"
         fi
     fi
 
@@ -356,24 +468,30 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         local_log="${SCRIPT_DIR}/../automation-logs/${FLOW_SLUG}-R${round}.log"
     fi
     agent_exit=0
-    invoke_runner "$prompt" "$local_log" || agent_exit=$?
-
-    if [ "$agent_exit" -ne 0 ]; then
-        log_warn "Agent exited with code ${agent_exit}"
-        append_progress "$FLOW_SLUG" "R${round}: agent exit=${agent_exit}"
+    if [ "$resume_skip_runner" -eq 1 ]; then
+        append_progress "$FLOW_SLUG" "R${round}: runner skipped by phase checkpoint"
     else
-        log_info "Agent completed successfully"
-        append_progress "$FLOW_SLUG" "R${round}: agent completed"
+        invoke_runner "$prompt" "$local_log" || agent_exit=$?
+
+        if [ "$agent_exit" -ne 0 ]; then
+            log_warn "Agent exited with code ${agent_exit}"
+            append_progress "$FLOW_SLUG" "R${round}: agent exit=${agent_exit}"
+        else
+            log_info "Agent completed successfully"
+            append_progress "$FLOW_SLUG" "R${round}: agent completed"
+        fi
     fi
 
     # 4. Quality gates (external validation)
     log_info "Running quality gates..."
+    append_round_event "$FLOW_SLUG" "$round" "quality_gates_started" "modules=${MODULES};allowed_paths=${ALLOWED_PATHS}"
     cd "$PROJECT_ROOT"
     gate_result=0
     run_quality_gates "$FLOW_SLUG" "$round" "$MODULES" "$WORKFLOW_DIR_ABS" "$ALLOWED_PATHS" "$BASELINE_COMMIT" || gate_result=$?
 
     log_info "Validation results:"
     printf '%b' "$VALIDATE_RESULT" | while IFS= read -r line; do log_info "  $line"; done
+    append_round_event "$FLOW_SLUG" "$round" "quality_gates_finished" "gate_result=${gate_result};failure_type=${FAILURE_TYPE};gate_failures=${GATE_FAILURES}"
     append_progress "$FLOW_SLUG" "R${round} validation:"
     printf '%b' "$VALIDATE_RESULT" >> "$(progress_file "$FLOW_SLUG")"
 
@@ -404,16 +522,53 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
     if [ "$gate_result" -ne 0 ] && [ -n "$FAILURE_TYPE" ]; then
         local_retry_count=0
         local_retry_max=0
-        case "$FAILURE_TYPE" in
-            compile_failed)    local_retry_max=$RETRY_COMPILE ;;
-            test_failed)       local_retry_max=$RETRY_TEST ;;
-            malformed_output)  local_retry_max=$RETRY_MALFORMED ;;
-            path_violation)    local_retry_max=0 ;;  # no auto-retry for path violations
-        esac
+        while true; do
+            case "$FAILURE_TYPE" in
+                compile_failed)    local_retry_max=$RETRY_COMPILE ;;
+                test_failed)       local_retry_max=$RETRY_TEST ;;
+                malformed_output)  local_retry_max=$RETRY_MALFORMED ;;
+                path_violation)    local_retry_max=0 ;;  # handled by allowed_paths auto-expand
+                *)                 local_retry_max=0 ;;
+            esac
 
-        while [ "$local_retry_count" -lt "$local_retry_max" ]; do
+            if [ "$gate_result" -eq 0 ] || [ -z "$FAILURE_TYPE" ]; then
+                break
+            fi
+
+            if [ "$FAILURE_TYPE" = "path_violation" ]; then
+                expand_allowed_paths_for_path_violation "$ALLOWED_PATHS" "$VALIDATE_RESULT"
+                expanded_allowed_paths="$PATH_EXPANDED_ALLOWED_PATHS"
+                expanded_additions="$PATH_EXPAND_ADDITIONS"
+                if [ -n "$expanded_additions" ]; then
+                    ALLOWED_PATHS="$expanded_allowed_paths"
+                    log_warn "Auto-expanded allowed_paths for path_violation: ${expanded_additions}"
+                    append_round_event "$FLOW_SLUG" "$round" "path_violation_auto_expanded" "additions=${expanded_additions}"
+                    append_progress "$FLOW_SLUG" "R${round}: auto-expand allowed_paths (${expanded_additions})"
+
+                    gate_result=0
+                    run_quality_gates "$FLOW_SLUG" "$round" "$MODULES" "$WORKFLOW_DIR_ABS" "$ALLOWED_PATHS" "$BASELINE_COMMIT" || gate_result=$?
+                    log_info "Validation after path whitelist auto-expansion:"
+                    printf '%b' "$VALIDATE_RESULT" | while IFS= read -r line; do log_info "  $line"; done
+                    append_round_event "$FLOW_SLUG" "$round" "path_violation_revalidated" "gate_result=${gate_result};failure_type=${FAILURE_TYPE}"
+                    [ "$gate_result" -eq 0 ] && log_info "Path whitelist auto-expansion succeeded"
+                    continue
+                fi
+
+                log_warn "Path violation detected but no new paths parsed; bypassing BLOCK by default policy"
+                append_round_event "$FLOW_SLUG" "$round" "path_violation_bypassed" "reason=no_new_paths_parsed"
+                append_progress "$FLOW_SLUG" "R${round}: path_violation bypassed (no new paths parsed)"
+                gate_result=0
+                FAILURE_TYPE=""
+                break
+            fi
+
+            if [ "$local_retry_count" -ge "$local_retry_max" ]; then
+                break
+            fi
+
             local_retry_count=$((local_retry_count + 1))
             log_warn "Retry ${local_retry_count}/${local_retry_max} for ${FAILURE_TYPE}"
+            append_round_event "$FLOW_SLUG" "$round" "retry_started" "retry=${local_retry_count}/${local_retry_max};failure_type=${FAILURE_TYPE}"
             append_progress "$FLOW_SLUG" "R${round}: retry ${local_retry_count}/${local_retry_max} (${FAILURE_TYPE})"
 
             # Build retry prompt — pass the right error log per failure type
@@ -438,11 +593,8 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
             run_quality_gates "$FLOW_SLUG" "$round" "$MODULES" "$WORKFLOW_DIR_ABS" "$ALLOWED_PATHS" "$BASELINE_COMMIT" || gate_result=$?
             log_info "Retry validation:"
             printf '%b' "$VALIDATE_RESULT" | while IFS= read -r line; do log_info "  $line"; done
-
-            if [ "$gate_result" -eq 0 ] || [ -z "$FAILURE_TYPE" ]; then
-                log_info "Retry succeeded — gates now pass"
-                break
-            fi
+            append_round_event "$FLOW_SLUG" "$round" "retry_finished" "retry=${local_retry_count}/${local_retry_max};gate_result=${gate_result};failure_type=${FAILURE_TYPE}"
+            [ "$gate_result" -eq 0 ] && log_info "Retry succeeded — gates now pass"
         done
 
         # Audit: record retries
@@ -457,6 +609,7 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         if [ "$gate_result" -ne 0 ] && [ -n "$FAILURE_TYPE" ]; then
             if [ "$FAILURE_TYPE" = "path_violation" ] || [ "$local_retry_count" -ge "$local_retry_max" ]; then
                 log_error "Gate failure persists after ${local_retry_count} retries (${FAILURE_TYPE}), marking BLOCKED"
+                append_round_event "$FLOW_SLUG" "$round" "round_blocked" "failure_type=${FAILURE_TYPE};retries=${local_retry_count}"
                 append_progress "$FLOW_SLUG" "R${round}: BLOCKED (${FAILURE_TYPE} after ${local_retry_count} retries)"
                 exit 1
             fi
@@ -482,6 +635,7 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
                 append_progress "$FLOW_SLUG" "R${round}: gap-closed without commit, suspicious"
             else
                 log_info "All gaps closed for ${FLOW_SLUG}"
+                append_round_event "$FLOW_SLUG" "$round" "round_completed" "reason=all_gaps_closed"
                 append_progress "$FLOW_SLUG" "R${round}: ALL GAPS CLOSED"
                 exit 0
             fi
@@ -489,6 +643,7 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
 
         if has_blocked_flag "$gap_file"; then
             log_warn "BLOCKED detected in gap analysis"
+            append_round_event "$FLOW_SLUG" "$round" "round_blocked" "reason=gap_file_blocked"
             append_progress "$FLOW_SLUG" "R${round}: BLOCKED"
             exit 1
         fi
@@ -509,6 +664,7 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
 
     if [ "$stall_count" -ge "$STALL_LIMIT" ]; then
         log_error "Stalled: ${STALL_LIMIT} consecutive rounds with no progress"
+        append_round_event "$FLOW_SLUG" "$round" "round_stalled" "stall_count=${stall_count};stall_limit=${STALL_LIMIT}"
         append_progress "$FLOW_SLUG" "R${round}: STALLED"
         exit 3
     fi
@@ -520,6 +676,7 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
 done
 
 log_warn "Reached max rounds (${MAX_ROUNDS}) for ${FLOW_SLUG}"
+append_round_event "$FLOW_SLUG" "${CURRENT_ROUND:-$MAX_ROUNDS}" "max_rounds_reached" "max_rounds=${MAX_ROUNDS}"
 append_progress "$FLOW_SLUG" "Reached max rounds (${MAX_ROUNDS})"
 if [ "$DRY_RUN" -eq 1 ]; then
     log_info "[DRY-RUN] All rounds previewed successfully"

@@ -20,15 +20,15 @@ Then install the plugin:
 /plugin install gdim-workflow@BeMxself-gdim-workflow-skill
 ```
 
-After installation, all `/gdim-*` commands will be available (including `/gdim-auto`, Claude Code only; Codex support is planned).
+After installation, all `/gdim-*` commands will be available (including `/gdim-auto`).
 
 ### Codex (Skills)
 
-Per Codex skills docs, Codex scans skill folders from:
-- project-level `.agents/skills/` (from current directory up to repo root)
-- user-level `$HOME/.agents/skills/`
+Common Codex skill scan paths (can vary by version/environment):
+- project-level: `.agents/skills/`, `.codex/skills/`
+- user-level: `$HOME/.agents/skills/`, `${CODEX_HOME:-$HOME/.codex}/skills/`
 
-Note: the workflow usage examples in this README primarily use Claude Code `/gdim-*` commands; in Codex you can invoke the same skills as `$gdim-*`. `/gdim-auto` relies on Claude Code AskUserQuestion/Skill tools and is not supported in Codex yet (support planned).
+Note: examples in this README primarily use Claude Code `/gdim-*`; in Codex, invoke the same skills as `$gdim-*` (including `$gdim-auto`).
 
 Option A (Recommended): Install via `$skill-installer` inside Codex
 
@@ -38,6 +38,7 @@ In a Codex chat, you can ask the installer to pull these skills from GitHub (mul
 $skill-installer Please install these skills from GitHub repo BeMxself/gdim-workflow-skill:
 - skills/gdim
 - skills/gdim-init
+- skills/gdim-auto
 - skills/gdim-intent
 - skills/gdim-scope
 - skills/gdim-design
@@ -52,7 +53,14 @@ Restart Codex to pick up the new skills.
 
 Option B: Manual install (rsync)
 
-User-level installation:
+User-level installation (recommended):
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+rsync -a skills/ "${CODEX_HOME:-$HOME/.codex}/skills/"
+```
+
+Compatibility install (legacy path):
 
 ```bash
 mkdir -p ~/.agents/skills
@@ -103,11 +111,13 @@ kiro-cli agent create --name "GDIM Agent" --directory .kiro/agents
 kiro-cli chat --agent "GDIM Agent"
 ```
 
+Note: in kiro-cli you typically do not use `/gdim-*` or `$gdim-*` prefixes; explicitly ask the agent to use `gdim-*` / `gdim-auto` skill in the chat prompt.
+
 ## Relationship to GDIM Specification
 
 These skills are **executable companions** to the GDIM specification documents:
 
-- **Skills** (`skills/`): Quick-reference rules for active workflows, optimized for Claude Code
+- **Skills** (`skills/`): Quick-reference workflow rules for Claude/Codex/Kiro (Claude: `/gdim-*`, Codex: `$gdim-*`)
 - **Portable reference** (`skills/gdim/references/gdim-portable-reference.md`): Bundled fallback for skills-only installations
 - **Specification** ([`skills/gdim/references/docs/GDIM 规范.md`](skills/gdim/references/docs/GDIM%20规范.md)): Complete methodology, templates, and rationale
 - **Quick Guide** ([`skills/gdim/references/docs/GDIM 实践快速指南.md`](skills/gdim/references/docs/GDIM%20实践快速指南.md)): Human-readable introduction
@@ -116,6 +126,8 @@ These skills are **executable companions** to the GDIM specification documents:
 
 **When to use what:**
 - Working in Claude Code → Use these skills (`/gdim-*` commands)
+- Working in Codex → Use these skills (`$gdim-*` commands)
+- Working in kiro-cli → Explicitly ask for the corresponding `gdim-*` skill in chat
 - Learning GDIM → Read [`skills/gdim/references/docs/GDIM 实践快速指南.md`](skills/gdim/references/docs/GDIM%20实践快速指南.md)
 - Need detailed templates → Reference [`skills/gdim/references/docs/GDIM 规范.md`](skills/gdim/references/docs/GDIM%20规范.md) or [`skills/gdim/references/docs/GDIM 提示词模版.md`](skills/gdim/references/docs/GDIM%20提示词模版.md)
 - Frontend projects → Also see [`skills/gdim/references/docs/GDIM 提示词模版（前端版）.md`](skills/gdim/references/docs/GDIM%20提示词模版（前端版）.md)
@@ -131,7 +143,7 @@ GDIM constrains AI execution through:
 
 ## Quick Start
 
-If you already have a design doc and want automated multi-flow setup, use `/gdim-auto`. See `REFERENCE.md#gdim-auto`.
+If you already have a design doc and want automated multi-flow setup, use `gdim-auto` (Claude: `/gdim-auto`; Codex: `$gdim-auto`; kiro-cli: explicit skill invocation in chat). See `REFERENCE.md#gdim-auto`.
 
 ### 1. Initialize a Workflow
 
@@ -173,13 +185,19 @@ Each round follows the same cycle:
 
 ## /gdim-auto (Automation)
 
-Use this when you already have a design document and want to split it into multiple GDIM flows and generate a runnable automation environment (Claude Code only; Codex support planned).
+Use this when you already have a design document and want to split it into multiple GDIM flows and generate a runnable automation environment (skill invocation supported in Claude/Codex/kiro-cli).
 
 Basic usage:
 
 ```bash
+# Claude Code
 /gdim-auto path/to/design-doc.md
+
+# Codex
+$gdim-auto path/to/design-doc.md
 ```
+
+kiro-cli: ask the agent in chat to use `gdim-auto` with the design-doc path.
 
 It generates:
 - `.ai-workflows/YYYYMMDD-<task-slug>/` (task directory)
@@ -204,7 +222,7 @@ See `REFERENCE.md` for the full `/gdim-auto` guide (includes an example): `REFER
 |-------|---------|-------------|
 | `gdim` | Core rules (auto-loaded) | Background knowledge |
 | `gdim-init` | Initialize workflow directory | Starting new GDIM task |
-| `gdim-auto` | Generate multi-flow automation from a design doc (Claude Code only) | When you want automated task + flow setup |
+| `gdim-auto` | Generate multi-flow automation from a design doc | When you want automated task + flow setup |
 | `gdim-intent` | Generate Intent document | Defining goals from docs/brainstorming |
 | `gdim-scope` | Define round scope | Starting each round |
 | `gdim-design` | Generate design | After scope is defined |
@@ -321,4 +339,4 @@ These skills are designed to be iteratively improved:
 
 ## Version
 
-**v1.3.0** - Multi-executor automation with phase-granular checkpoint resume
+**v1.4.0** - Observability and resume upgrades (runner heartbeat, path_violation auto-expand, granular state events)

@@ -14,7 +14,11 @@
 /plugin install gdim-workflow@BeMxself-gdim-workflow-skill
 ```
 
-安装后，所有 `/gdim-*` 命令即可使用。
+安装后，所有 `/gdim-*` 命令即可使用（包含 `/gdim-auto`）。
+
+补充说明：
+- Codex 中同名 skill 使用 `$gdim-*` 调用（例如 `$gdim-auto docs/design/foo.md`）
+- kiro-cli 中通常不使用 `/` 或 `$` 前缀，需在对话里显式要求使用 `gdim-*` / `gdim-auto` skill
 
 ## 验证安装
 
@@ -104,4 +108,4 @@ gdim-workflow/
 1. 阅读 `README.md` 了解使用方法
 2. 阅读 `skills/gdim/references/docs/GDIM 实践快速指南.md` 学习 GDIM
 3. 运行 `TESTING.md` 中的测试场景
-4. 在真实项目中使用 `/gdim-*` 命令
+4. 在真实项目中使用对应命令前缀（Claude：`/gdim-*`，Codex：`$gdim-*`，kiro-cli：对话显式点名 skill）

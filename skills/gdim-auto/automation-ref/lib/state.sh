@@ -95,6 +95,29 @@ set_round_field() {
     _safe_jq_write "$file" --arg f "$field" --argjson v "$value" '.[$f] = $v'
 }
 
+append_round_event() {
+    local slug="$1" round="$2" event="$3" detail="${4:-}"
+    _ensure_jq
+    local file
+    file=$(round_state_file "$slug")
+    mkdir -p "$(dirname "$file")"
+    if [ ! -f "$file" ]; then
+        echo '{"current_round":0,"stall_count":0}' > "$file"
+    fi
+
+    local ts
+    ts=$(date '+%Y-%m-%dT%H:%M:%S')
+    _safe_jq_write "$file" \
+      --arg ts "$ts" \
+      --arg r "R${round}" \
+      --arg e "$event" \
+      --arg d "$detail" \
+      '
+      .events = ((.events // []) + [{time:$ts, round:$r, event:$e, detail:$d}]) |
+      .last_event = {time:$ts, round:$r, event:$e, detail:$d}
+      ' || true
+}
+
 # --- Progress ---
 
 progress_file() {

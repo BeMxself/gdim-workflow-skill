@@ -14,6 +14,11 @@ This document helps you test the GDIM skills to ensure they work as intended.
   - `kiro-cli` (for `--runner kiro`)
 - `mvn` installed if you want compile/test gates for Maven modules
 
+Skill invocation map by agent:
+- Claude Code: `/gdim-*`
+- Codex: `$gdim-*`
+- kiro-cli: explicitly ask in chat to use `gdim-*` skill (no fixed `/` or `$` prefix)
+
 ## Test Scenarios
 
 ### Scenario 1: Scope Overload Test
@@ -104,7 +109,10 @@ This document helps you test the GDIM skills to ensure they work as intended.
 
 **Steps**:
 1. Prepare a design document path relative to project root
-2. Run `/gdim-auto path/to/design-doc.md`
+2. Run `gdim-auto` with your agent style:
+   - Claude Code: `/gdim-auto path/to/design-doc.md`
+   - Codex: `$gdim-auto path/to/design-doc.md`
+   - kiro-cli: ask the agent to use `gdim-auto` with that design-doc path
 3. **Expected**: `.ai-workflows/YYYYMMDD-<task-slug>/` created with `config/flows.json`, `00-intent.md`, `intents/`, `run.sh`, `state/`, `logs/`
 4. **Expected**: `automation/ai-coding/` exists and contains synced public scripts
 5. Run `.ai-workflows/YYYYMMDD-<task-slug>/run.sh --dry-run`

@@ -20,15 +20,15 @@
 /plugin install gdim-workflow@BeMxself-gdim-workflow-skill
 ```
 
-安装完成后，所有 `/gdim-*` 命令即可使用（包含 `/gdim-auto`，仅 Claude Code；Codex 支持计划中）。
+安装完成后，所有 `/gdim-*` 命令即可使用（包含 `/gdim-auto`）。
 
 ### Codex（Skills）
 
-根据 Codex 官方 skills 文档，Codex 会从以下位置扫描 skills：
-- 项目级 `.agents/skills/`（从当前目录向上到仓库根目录）
-- 用户级 `$HOME/.agents/skills/`
+Codex 常见的 skill 扫描目录（不同版本/环境可能有差异）：
+- 项目级：`.agents/skills/`、`.codex/skills/`
+- 用户级：`$HOME/.agents/skills/`、`${CODEX_HOME:-$HOME/.codex}/skills/`
 
-说明：本文后续的工作流“使用示例”默认以 Claude Code 的 `/gdim-*` 命令为主；在 Codex 中可用 `$gdim-*` 调用同名 skills。注意：`/gdim-auto` 依赖 Claude Code 的 AskUserQuestion/Skill 工具，当前不支持 Codex（后续会增强支持）。
+说明：本文后续示例默认以 Claude Code 的 `/gdim-*` 展示；在 Codex 中请使用 `$gdim-*` 调用同名 skills（包括 `$gdim-auto`）。
 
 方式 A（推荐）：在 Codex 内使用 `$skill-installer` 从 GitHub 安装
 
@@ -38,6 +38,7 @@
 $skill-installer 请从 GitHub 仓库 BeMxself/gdim-workflow-skill 安装以下 skills：
 - skills/gdim
 - skills/gdim-init
+- skills/gdim-auto
 - skills/gdim-intent
 - skills/gdim-scope
 - skills/gdim-design
@@ -52,7 +53,14 @@ $skill-installer 请从 GitHub 仓库 BeMxself/gdim-workflow-skill 安装以下 
 
 方式 B：手动同步 skills 目录（rsync）
 
-用户级安装：
+用户级安装（推荐）：
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+rsync -a skills/ "${CODEX_HOME:-$HOME/.codex}/skills/"
+```
+
+兼容安装（旧目录）：
 
 ```bash
 mkdir -p ~/.agents/skills
@@ -103,11 +111,13 @@ kiro-cli agent create --name "GDIM Agent" --directory .kiro/agents
 kiro-cli chat --agent "GDIM Agent"
 ```
 
+说明：kiro-cli 中通常不使用 `/gdim-*` 或 `$gdim-*` 前缀；请在对话中明确要求使用 `gdim-*` / `gdim-auto` skill（例如“请使用 gdim-auto 处理 docs/design/foo.md”）。
+
 ## 与 GDIM 规范的关系
 
 这些 skills 是 GDIM 规范文档的 **可执行伴侣**：
 
-- **Skills**（`skills/`）：用于 Claude Code 的快速规则与工作流指令（调用 `/gdim-*`）
+- **Skills**（`skills/`）：用于 Claude/Codex/Kiro 的快速规则与工作流指令（Claude 用 `/gdim-*`，Codex 用 `$gdim-*`）
 - **便携参考**（`skills/gdim/references/gdim-portable-reference.md`）：用于仅安装 skills 的场景
 - **规范**（[`skills/gdim/references/docs/GDIM 规范.md`](skills/gdim/references/docs/GDIM%20规范.md)）：完整方法论、模板与 rationale
 - **快速指南**（[`skills/gdim/references/docs/GDIM 实践快速指南.md`](skills/gdim/references/docs/GDIM%20实践快速指南.md)）：更易读的入门介绍
@@ -116,6 +126,8 @@ kiro-cli chat --agent "GDIM Agent"
 
 **什么时候用哪个：**
 - 在 Claude Code 工作 → 用这些 skills（`/gdim-*` 命令）
+- 在 Codex 工作 → 用这些 skills（`$gdim-*` 命令）
+- 在 kiro-cli 工作 → 在对话中显式要求使用对应 `gdim-*` skill
 - 学习 GDIM → 阅读 [`skills/gdim/references/docs/GDIM 实践快速指南.md`](skills/gdim/references/docs/GDIM%20实践快速指南.md)
 - 需要详细模板 → 参考 [`skills/gdim/references/docs/GDIM 规范.md`](skills/gdim/references/docs/GDIM%20规范.md) 或 [`skills/gdim/references/docs/GDIM 提示词模版.md`](skills/gdim/references/docs/GDIM%20提示词模版.md)
 - 前端项目 → 也请看 [`skills/gdim/references/docs/GDIM 提示词模版（前端版）.md`](skills/gdim/references/docs/GDIM%20提示词模版（前端版）.md)
@@ -131,7 +143,7 @@ GDIM 通过以下方式约束 AI 的执行：
 
 ## 快速开始
 
-如果你已有设计文档并希望自动拆解为多流程任务，可直接使用 `/gdim-auto`，详见 `REFERENCE.md#gdim-auto`。
+如果你已有设计文档并希望自动拆解为多流程任务，可直接使用 `gdim-auto`（Claude：`/gdim-auto`；Codex：`$gdim-auto`；kiro-cli：对话中显式点名 skill），详见 `REFERENCE.md#gdim-auto`。
 
 ### 1) 初始化一个工作流
 
@@ -173,13 +185,19 @@ GDIM 通过以下方式约束 AI 的执行：
 
 ## /gdim-auto（自动化执行）
 
-当你已有设计文档，希望自动拆解为多条 GDIM 流程并生成可执行环境时使用（仅 Claude Code；Codex 支持计划中）。
+当你已有设计文档，希望自动拆解为多条 GDIM 流程并生成可执行环境时使用（支持 Claude/Codex/kiro-cli 触发 skill）。
 
 基本用法：
 
 ```bash
+# Claude Code
 /gdim-auto path/to/design-doc.md
+
+# Codex
+$gdim-auto path/to/design-doc.md
 ```
+
+kiro-cli：在对话中要求 agent 使用 `gdim-auto` skill，并提供设计文档路径。
 
 它会生成：
 - `.ai-workflows/YYYYMMDD-<task-slug>/`（任务目录）
@@ -204,7 +222,7 @@ GDIM 通过以下方式约束 AI 的执行：
 |------|------|---------|
 | `gdim` | 核心规则（自动加载） | 作为背景约束 |
 | `gdim-init` | 初始化工作流目录 | 新建 GDIM 任务 |
-| `gdim-auto` | 从设计文档生成多流程自动化环境（仅 Claude Code） | 已有设计文档、希望自动生成任务与流程 |
+| `gdim-auto` | 从设计文档生成多流程自动化环境 | 已有设计文档、希望自动生成任务与流程 |
 | `gdim-intent` | 生成 Intent 文档 | 从文档/头脑风暴提炼目标 |
 | `gdim-scope` | 定义本轮 scope | 每一轮开始时 |
 | `gdim-design` | 生成设计文档 | scope 确认后 |
@@ -321,4 +339,4 @@ Gap 是“预期”与“实际”之间的 **结构性偏差**：
 
 ## 版本
 
-**v1.3.0** - 多执行器自动化与 phase 粒度断点恢复版本
+**v1.4.0** - 执行可观测性与恢复增强版本（心跳日志、path_violation 自动扩范围、细颗粒度状态事件）

@@ -23,7 +23,7 @@
 
 | Skill | 用途 | 词数 | 状态 |
 |------|------|------|------|
-| `gdim-auto` | 从设计文档生成多流程自动化环境（Claude Code） | 606 | ✅ |
+| `gdim-auto` | 从设计文档生成多流程自动化环境（Claude/Codex/Kiro） | 606 | ✅ |
 
 **说明**：该 skill 不计入“核心 Skills（10个）”的词数统计。
 
@@ -158,7 +158,7 @@ description: Use when defining scope - creates In Scope, Out of Scope, and Defer
 /gdim-final        # 如果完成
 ```
 
-可选：已有设计文档时可直接使用 `/gdim-auto <design-doc-path>` 生成自动化任务目录与流程。
+可选：已有设计文档时可直接使用 `gdim-auto` 生成自动化任务目录与流程（Claude：`/gdim-auto`；Codex：`$gdim-auto`；kiro-cli：对话中显式点名 skill）。
 
 ## 测试建议
 

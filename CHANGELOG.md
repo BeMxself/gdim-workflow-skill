@@ -1,5 +1,33 @@
 # 更新日志
 
+## v1.4.0 - 2026-03-02
+
+### /gdim-auto 执行与恢复增强
+
+- `run-gdim-round.sh` 新增 runner 心跳日志：
+  - 周期输出 `Runner still running... elapsed=<N>s`
+  - 支持 `GDIM_HEARTBEAT_SECONDS` 配置（`0` 可关闭）
+- `path_violation` 默认自动扩展 `allowed_paths`（按越界文件目录前缀），避免因该类型失败直接 BLOCK。
+- 断点恢复增强：
+  - 当同一 round 的 phase checkpoint 全部为 `passed` 时，自动跳过 runner，直接从 quality gates 继续。
+- 状态记录增强：
+  - `state/<flow>/round-state.json` 增加细颗粒度 `events` 与 `last_event`，记录 round/runner/gates/retry/block 等关键事件。
+
+### 文档更新
+
+- 更新 `README.md` / `README.en.md` / `REFERENCE.md` / `INSTALL.md` / `TESTING.md` / `DELIVERY.md`：
+  - 明确 `gdim-auto` 在 Claude/Codex/kiro-cli 的触发方式
+  - 明确 Codex 的 `$gdim-*` 用法与 `~/.codex/skills` 安装路径
+  - 补充 path_violation 自动扩范围与细颗粒度状态记录说明
+
+### 测试补充
+
+- 新增并通过：
+  - `test-runner-heartbeat-log.sh`
+  - `test-path-violation-auto-expand-no-block.sh`
+  - `test-round-state-granular-progress-events.sh`
+  - `test-resume-skips-runner-when-phases-passed.sh`
+
 ## v1.3.0 - 2026-03-02
 
 ### /gdim-auto 多执行器支持
