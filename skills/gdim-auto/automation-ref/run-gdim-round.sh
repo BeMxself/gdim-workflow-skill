@@ -8,7 +8,8 @@ set -euo pipefail
 #          --flow-slug SLUG --max-rounds N \
 #          --workflow-dir DIR --intent-file FILE \
 #          --design-doc DOC --modules MODS \
-#          [--allowed-paths PATHS] [--stage A|B|C] [--dry-run] [--timeout MIN]
+#          [--allowed-paths PATHS] [--stage A|B|C] [--runner NAME|--executor NAME] \
+#          [--runner-cmd CMD] [--kiro-agent NAME] [--dry-run] [--timeout MIN]
 #
 # Exit codes: 0=all gaps closed, 1=BLOCKED, 2=max rounds, 3=stalled
 
@@ -29,6 +30,9 @@ DRY_RUN=0
 TIMEOUT_MINUTES=45
 SKIP_CLEAN_CHECK=0
 TASK_DIR=""
+RUNNER_OVERRIDE=""
+RUNNER_CMD_OVERRIDE=""
+KIRO_AGENT_OVERRIDE=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -44,12 +48,15 @@ while [[ $# -gt 0 ]]; do
         --timeout)        TIMEOUT_MINUTES="$2"; shift 2 ;;
         --skip-clean-check) SKIP_CLEAN_CHECK=1; shift ;;
         --task-dir)       TASK_DIR="$2"; shift 2 ;;
+        --runner|--executor) RUNNER_OVERRIDE="$2"; shift 2 ;;
+        --runner-cmd)     RUNNER_CMD_OVERRIDE="$2"; shift 2 ;;
+        --kiro-agent)     KIRO_AGENT_OVERRIDE="$2"; shift 2 ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
 done
 
 if [ -z "$FLOW_SLUG" ] || [ -z "$WORKFLOW_DIR" ]; then
-    echo "Usage: $0 --flow-slug SLUG --workflow-dir DIR [options]" >&2
+    echo "Usage: $0 --flow-slug SLUG --workflow-dir DIR [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME] [options]" >&2
     exit 1
 fi
 
@@ -68,6 +75,8 @@ source "$SCRIPT_DIR/lib/state.sh"
 source "$SCRIPT_DIR/lib/validate.sh"
 # shellcheck source=lib/prompt-builder.sh
 source "$SCRIPT_DIR/lib/prompt-builder.sh"
+# shellcheck source=lib/runner.sh
+source "$SCRIPT_DIR/lib/runner.sh"
 
 export CURRENT_FLOW="$FLOW_SLUG"
 
@@ -86,6 +95,38 @@ fi
 RETRY_COMPILE=$(jq -r '.retry_limits.compile_failed // 2' "$CONFIG_FILE" 2>/dev/null || echo 2)
 RETRY_TEST=$(jq -r '.retry_limits.test_failed // 2' "$CONFIG_FILE" 2>/dev/null || echo 2)
 RETRY_MALFORMED=$(jq -r '.retry_limits.malformed_output // 1' "$CONFIG_FILE" 2>/dev/null || echo 1)
+
+RUNNER="$(jq -r '.execution.runner // "claude"' "$CONFIG_FILE" 2>/dev/null || echo "claude")"
+if [ -n "$RUNNER_OVERRIDE" ]; then
+    RUNNER="$RUNNER_OVERRIDE"
+fi
+if ! validate_runner_name "$RUNNER"; then
+    log_error "Invalid runner name: ${RUNNER}"
+    exit 1
+fi
+
+RUNNER_CMD="$(runner_command_from_config "$CONFIG_FILE" "$RUNNER")"
+if [ -n "$RUNNER_CMD_OVERRIDE" ]; then
+    RUNNER_CMD="$RUNNER_CMD_OVERRIDE"
+fi
+
+KIRO_AGENT="$(runner_kiro_agent_from_config "$CONFIG_FILE")"
+if [ -n "$KIRO_AGENT_OVERRIDE" ]; then
+    KIRO_AGENT="$KIRO_AGENT_OVERRIDE"
+fi
+
+KIRO_MODEL_PREFERENCE="$(runner_preferred_model_from_config "$CONFIG_FILE")"
+if [ -z "$KIRO_MODEL_PREFERENCE" ]; then
+    KIRO_MODEL_PREFERENCE="${GDIM_KIRO_MODEL:-}"
+fi
+
+if [ -z "$KIRO_AGENT" ]; then
+    if [[ "$KIRO_MODEL_PREFERENCE" =~ sonnet ]]; then
+        KIRO_AGENT="${GDIM_KIRO_AGENT:-gdim-kiro-sonnet}"
+    else
+        KIRO_AGENT="${GDIM_KIRO_AGENT:-gdim-kiro-opus}"
+    fi
+fi
 
 # Resolve paths
 WORKFLOW_DIR_ABS="${PROJECT_ROOT}/${WORKFLOW_DIR}"
@@ -118,25 +159,40 @@ fi
 
 # --- Preflight: required commands ---
 if [ "$DRY_RUN" -eq 0 ]; then
-    for _cmd in claude timeout jq; do
+    for _cmd in timeout jq; do
         if ! command -v "$_cmd" &>/dev/null; then
             log_error "Required command not found: $_cmd"
             exit 1
         fi
     done
+
+    if ! ensure_runner_ready "$RUNNER" "$RUNNER_CMD" "$PROJECT_ROOT" "${SCRIPT_DIR}/setup-kiro-agent.sh" "$KIRO_AGENT" "$KIRO_MODEL_PREFERENCE"; then
+        if [ -n "$RUNNER_CMD" ]; then
+            log_error "Runner preflight failed for ${RUNNER} (custom command configured)"
+        elif [ "$RUNNER" = "kiro" ]; then
+            log_error "Kiro runner preflight failed. Ensure kiro-cli and .kiro/agents/${KIRO_AGENT}.json are valid."
+        else
+            log_error "Runner preflight failed for ${RUNNER}. Ensure required CLI is installed."
+        fi
+        exit 1
+    fi
 fi
 
-# --- Helper: invoke claude CLI ---
-invoke_claude() {
+# --- Helper: invoke runner ---
+invoke_runner() {
     local prompt_text="$1"
     local log_file="$2"
-    mkdir -p "$(dirname "$log_file")"
-    log_info "Invoking claude CLI (timeout=${TIMEOUT_MINUTES}m)..."
+    local prompt_file=""
     local exit_code=0
-    echo "$prompt_text" | timeout "${TIMEOUT_MINUTES}m" claude -p \
-        --dangerously-skip-permissions \
-        --allowedTools "Bash,Edit,Read,Write,Glob,Grep,Task,Skill" \
-        > "$log_file" 2>&1 || exit_code=$?
+
+    mkdir -p "$(dirname "$log_file")"
+    prompt_file="$(mktemp)"
+    printf "%s" "$prompt_text" >"$prompt_file"
+
+    log_info "Invoking runner=${RUNNER} (timeout=${TIMEOUT_MINUTES}m)..."
+    run_runner "$RUNNER" "$prompt_file" "$log_file" "$TIMEOUT_MINUTES" "$PROJECT_ROOT" "$RUNNER_CMD" "$KIRO_AGENT" || exit_code=$?
+
+    rm -f "$prompt_file"
     return $exit_code
 }
 
@@ -263,7 +319,7 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         "$prev_gap_file")
 
     if [ "$DRY_RUN" -eq 1 ]; then
-        log_info "[DRY-RUN] Would send prompt (${#prompt} chars) to claude"
+        log_info "[DRY-RUN] Would send prompt (${#prompt} chars) to runner=${RUNNER}"
         log_info "[DRY-RUN] Skipping execution"
         round=$((round + 1))
         # If this was the last round in dry-run, exit 0 (not 2)
@@ -274,14 +330,14 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         continue
     fi
 
-    # 3. Execute Claude CLI with timeout
+    # 3. Execute runner with timeout
     if [ -n "${TASK_DIR:-}" ]; then
         local_log="${TASK_DIR}/logs/${FLOW_SLUG}-R${round}.log"
     else
         local_log="${SCRIPT_DIR}/../automation-logs/${FLOW_SLUG}-R${round}.log"
     fi
     agent_exit=0
-    invoke_claude "$prompt" "$local_log" || agent_exit=$?
+    invoke_runner "$prompt" "$local_log" || agent_exit=$?
 
     if [ "$agent_exit" -ne 0 ]; then
         log_warn "Agent exited with code ${agent_exit}"
@@ -356,7 +412,7 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
                 retry_log="${SCRIPT_DIR}/../automation-logs/${FLOW_SLUG}-R${round}-retry${local_retry_count}.log"
             fi
             retry_exit=0
-            invoke_claude "$retry_prompt" "$retry_log" || retry_exit=$?
+            invoke_runner "$retry_prompt" "$retry_log" || retry_exit=$?
 
             # Re-run gates (with baseline)
             gate_result=0

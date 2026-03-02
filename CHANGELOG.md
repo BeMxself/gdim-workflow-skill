@@ -1,5 +1,32 @@
 # 更新日志
 
+## v1.2.3 - 2026-03-02
+
+### /gdim-auto 多执行器支持
+
+- `run-gdim-flows.sh` / `run-gdim-round.sh` 新增执行器参数：
+  - `--runner` / `--executor`
+  - `--runner-cmd`
+  - `--kiro-agent`
+- 自动化执行支持 `claude` / `codex` / `kiro` / 自定义命令。
+
+### Kiro Agent 预检查与自动创建
+
+- 新增 `automation-ref/setup-kiro-agent.sh`：
+  - 默认确保并创建 `gdim-kiro-opus`（`claude-opus-4.6`）
+  - 默认确保并创建 `gdim-kiro-sonnet`（`claude-sonnet-4.5`）
+- `runner=kiro` 时自动执行 agent 预检查，缺失或不符合要求时自动修复（`--ensure` 语义）。
+
+### 文档与测试更新
+
+- 更新 `README.md` / `README.en.md` / `REFERENCE.md` / `INSTALL.md` / `TESTING.md`：
+  - 明确 `/gdim-auto` 命令与执行脚本的支持边界
+  - 增补多执行器与 Kiro 双 agent 行为说明
+  - 增补多执行器 dry-run 与 Kiro agent 自检测试场景
+- `skills/gdim-auto/SKILL.md` 的路径定位改为“自动发现”：
+  - 不再硬编码 `~/.claude/plugins`
+  - 支持按当前 agent 环境从 `.claude/.agents/.kiro` 等目录解析 skill 位置
+
 ## v1.2.2 - 2026-02-24
 
 ### /gdim-auto 行为约束

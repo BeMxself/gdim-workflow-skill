@@ -31,6 +31,22 @@
 - `/gdim-gap`
 - `/gdim-final`
 
+## /gdim-auto 运行依赖（执行阶段）
+
+当你通过 `/gdim-auto` 生成任务目录后，`run.sh` 在终端运行时依赖：
+
+- `jq`
+- `timeout`
+- `mvn`（仅 Maven 项目需要编译/测试门禁时）
+- 执行器二选一或多选：
+  - `claude`（runner=claude）
+  - `codex`（runner=codex）
+  - `kiro-cli`（runner=kiro）
+
+`runner=kiro` 时会在运行前自动检查并确保以下 agent 存在：
+- `.kiro/agents/gdim-kiro-opus.json`
+- `.kiro/agents/gdim-kiro-sonnet.json`
+
 ## Plugin 目录结构
 
 ```
@@ -41,7 +57,7 @@ gdim-workflow/
 │   ├── gdim/SKILL.md            # 核心规则（自动加载）
 │   ├── gdim-init/SKILL.md
 │   ├── gdim-auto/SKILL.md
-│   ├── gdim-auto/automation-ref/ # /gdim-auto 公共脚本模板
+│   ├── gdim-auto/automation-ref/ # /gdim-auto 公共脚本模板（含 run-gdim-*.sh、lib/runner.sh、setup-kiro-agent.sh）
 │   ├── gdim-intent/SKILL.md
 │   ├── gdim-scope/SKILL.md
 │   ├── gdim-design/SKILL.md

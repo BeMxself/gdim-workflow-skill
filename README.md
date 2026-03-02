@@ -185,13 +185,15 @@ GDIM 通过以下方式约束 AI 的执行：
 - `.ai-workflows/YYYYMMDD-<task-slug>/`（任务目录）
 - `config/flows.json`、`00-intent.md`、`intents/*.md`、`run.sh`
 - 同步公共脚本到 `automation/ai-coding`（来源为 `skills/gdim-auto/automation-ref`）
+- `run.sh` 支持多执行器（`claude` / `codex` / `kiro` / 自定义命令）
 
 运行方式（示例）：
 - `.ai-workflows/YYYYMMDD-<task-slug>/run.sh`
 - `./run.sh --only N` / `./run.sh --from N` / `./run.sh --dry-run` / `./run.sh --stage A|B|C`
+- `./run.sh --runner codex` / `./run.sh --runner kiro --kiro-agent gdim-kiro-opus`
 
 依赖：
-- `claude` CLI、`jq`、`timeout`
+- `claude` / `codex` / `kiro-cli`（按所选执行器需要）、`jq`、`timeout`
 - `mvn`（用于 Maven 项目的编译/测试门禁）
 
 完整说明请见 `REFERENCE.md` 的 `/gdim-auto` 章节（含示例）：`REFERENCE.md#gdim-auto`。
@@ -319,4 +321,4 @@ Gap 是“预期”与“实际”之间的 **结构性偏差**：
 
 ## 版本
 
-**v1.1.0** - 基于 GDIM v1.5 规范的 Claude Code 插件发布版
+**v1.2.3** - 多执行器自动化（claude/codex/kiro/custom）与 Kiro 双 agent 自检版本

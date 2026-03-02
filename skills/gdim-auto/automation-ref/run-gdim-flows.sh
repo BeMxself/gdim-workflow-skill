@@ -5,6 +5,7 @@ set -euo pipefail
 # Orchestrates multiple GDIM flows in dependency order.
 #
 # Usage: ./automation/ai-coding/run-gdim-flows.sh --task-dir DIR [--from N] [--only N] [--dry-run]
+#          [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME]
 # Exit codes: 0=all done, 1=blocked, 2=max rounds, 3=stalled
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -19,6 +20,9 @@ UNBLOCK_SLUG=""
 STAGE_OVERRIDE=""
 SKIP_CLEAN_CHECK=0
 TASK_DIR=""
+RUNNER_OVERRIDE=""
+RUNNER_CMD_OVERRIDE=""
+KIRO_AGENT_OVERRIDE=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -29,8 +33,11 @@ while [[ $# -gt 0 ]]; do
         --unblock) UNBLOCK_SLUG="$2"; shift 2 ;;
         --stage)   STAGE_OVERRIDE="$2"; shift 2 ;;
         --skip-clean-check) SKIP_CLEAN_CHECK=1; shift ;;
+        --runner|--executor) RUNNER_OVERRIDE="$2"; shift 2 ;;
+        --runner-cmd) RUNNER_CMD_OVERRIDE="$2"; shift 2 ;;
+        --kiro-agent) KIRO_AGENT_OVERRIDE="$2"; shift 2 ;;
         -h|--help)
-            echo "Usage: $0 --task-dir DIR [--from N] [--only N] [--dry-run] [--unblock SLUG] [--stage A|B|C] [--skip-clean-check]"
+            echo "Usage: $0 --task-dir DIR [--from N] [--only N] [--dry-run] [--unblock SLUG] [--stage A|B|C] [--skip-clean-check] [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME]"
             echo "  --task-dir DIR       Task directory (required; config/state/logs read from here)"
             echo "  --from N             Start from flow number N"
             echo "  --only N             Run only flow number N"
@@ -38,6 +45,10 @@ while [[ $# -gt 0 ]]; do
             echo "  --unblock SLUG       Reset a blocked flow to pending"
             echo "  --stage X            Override stage for all flows (A=semi-auto, B=full-auto, C=convergence)"
             echo "  --skip-clean-check   Skip clean workspace preflight check"
+            echo "  --runner NAME        Override runner for all flows (claude/codex/kiro/custom)"
+            echo "  --executor NAME      Alias of --runner"
+            echo "  --runner-cmd CMD     Override runner command for all flows"
+            echo "  --kiro-agent NAME    Override kiro agent for all flows"
             exit 0 ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
@@ -106,6 +117,9 @@ for (( i=0; i<FLOW_COUNT; i++ )); do
     depends_on=$(jq -r ".flows[$i].depends_on | map(tostring) | join(\",\")" "$CONFIG_FILE")
     allowed_paths=$(jq -r ".flows[$i].allowed_paths | join(\",\")" "$CONFIG_FILE")
     flow_stage=$(jq -r ".flows[$i].stage // \"B\"" "$CONFIG_FILE")
+    flow_runner=$(jq -r ".flows[$i].runner // empty" "$CONFIG_FILE")
+    flow_runner_cmd=$(jq -r ".flows[$i].runner_cmd // empty" "$CONFIG_FILE")
+    flow_kiro_agent=$(jq -r ".flows[$i].kiro_agent // empty" "$CONFIG_FILE")
 
     # Stage override from CLI takes precedence
     if [ -n "$STAGE_OVERRIDE" ]; then
@@ -160,32 +174,50 @@ for (( i=0; i<FLOW_COUNT; i++ )); do
     # Resolve intent file path
     intent_file_path="${TASK_DIR}/intents/${intent_file}"
 
-    dry_run_flag=""
-    if [ "$DRY_RUN" -eq 1 ]; then
-        dry_run_flag="--dry-run"
+    selected_runner="$RUNNER_OVERRIDE"
+    if [ -z "$selected_runner" ]; then
+        selected_runner="$flow_runner"
     fi
-
-    skip_clean_flag=""
-    if [ "$SKIP_CLEAN_CHECK" -eq 1 ]; then
-        skip_clean_flag="--skip-clean-check"
+    selected_runner_cmd="$RUNNER_CMD_OVERRIDE"
+    if [ -z "$selected_runner_cmd" ]; then
+        selected_runner_cmd="$flow_runner_cmd"
     fi
-
-    task_dir_flag="--task-dir $TASK_DIR"
+    selected_kiro_agent="$KIRO_AGENT_OVERRIDE"
+    if [ -z "$selected_kiro_agent" ]; then
+        selected_kiro_agent="$flow_kiro_agent"
+    fi
 
     exit_code=0
-    "$SCRIPT_DIR/run-gdim-round.sh" \
-        --flow-slug "$flow_slug" \
-        --max-rounds "$max_rounds" \
-        --workflow-dir "$workflow_dir" \
-        --intent-file "$intent_file_path" \
-        --design-doc "$DESIGN_DOC" \
-        --modules "$modules" \
-        --allowed-paths "$allowed_paths" \
-        --stage "$flow_stage" \
-        $task_dir_flag \
-        $dry_run_flag \
-        $skip_clean_flag \
-        || exit_code=$?
+    round_cmd=(
+        "$SCRIPT_DIR/run-gdim-round.sh"
+        --flow-slug "$flow_slug"
+        --max-rounds "$max_rounds"
+        --workflow-dir "$workflow_dir"
+        --intent-file "$intent_file_path"
+        --design-doc "$DESIGN_DOC"
+        --modules "$modules"
+        --allowed-paths "$allowed_paths"
+        --stage "$flow_stage"
+        --task-dir "$TASK_DIR"
+    )
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        round_cmd+=(--dry-run)
+    fi
+    if [ "$SKIP_CLEAN_CHECK" -eq 1 ]; then
+        round_cmd+=(--skip-clean-check)
+    fi
+    if [ -n "$selected_runner" ]; then
+        round_cmd+=(--runner "$selected_runner")
+    fi
+    if [ -n "$selected_runner_cmd" ]; then
+        round_cmd+=(--runner-cmd "$selected_runner_cmd")
+    fi
+    if [ -n "$selected_kiro_agent" ]; then
+        round_cmd+=(--kiro-agent "$selected_kiro_agent")
+    fi
+
+    "${round_cmd[@]}" || exit_code=$?
 
     # Dry-run: skip state updates entirely
     if [ "$DRY_RUN" -eq 1 ]; then

@@ -185,13 +185,15 @@ It generates:
 - `.ai-workflows/YYYYMMDD-<task-slug>/` (task directory)
 - `config/flows.json`, `00-intent.md`, `intents/*.md`, `run.sh`
 - Syncs public scripts into `automation/ai-coding` (sourced from `skills/gdim-auto/automation-ref`)
+- `run.sh` supports multiple executors (`claude` / `codex` / `kiro` / custom command)
 
 Run examples:
 - `.ai-workflows/YYYYMMDD-<task-slug>/run.sh`
 - `./run.sh --only N` / `./run.sh --from N` / `./run.sh --dry-run` / `./run.sh --stage A|B|C`
+- `./run.sh --runner codex` / `./run.sh --runner kiro --kiro-agent gdim-kiro-opus`
 
 Dependencies:
-- `claude` CLI, `jq`, `timeout`
+- `claude` / `codex` / `kiro-cli` (depending on runner), `jq`, `timeout`
 - `mvn` (compile/test gates for Maven projects)
 
 See `REFERENCE.md` for the full `/gdim-auto` guide (includes an example): `REFERENCE.md#gdim-auto`.
@@ -319,4 +321,4 @@ These skills are designed to be iteratively improved:
 
 ## Version
 
-**v1.1.0** - Claude Code plugin release based on GDIM v1.5 specification
+**v1.2.3** - Multi-executor automation (claude/codex/kiro/custom) with dual Kiro agent precheck

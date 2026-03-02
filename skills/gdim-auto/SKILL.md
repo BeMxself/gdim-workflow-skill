@@ -24,14 +24,60 @@ argument: "<design-doc-path>"
 在执行任何操作前，先确定两个关键路径：
 
 - **PROJECT_ROOT**: 当前工作目录（即用户运行 Claude Code 的项目根目录）
-- **SKILL_DIR**: 本 skill 所在目录。通过以下方式定位：
+- **SKILL_DIR**: 本 skill 所在目录。不要硬编码某个 agent 的插件目录，按以下顺序自动发现：
   ```bash
-  # 查找本 skill 的 SKILL.md，然后取其父目录
-  SKILL_FILE=$(find ~/.claude/plugins -type f -path "*/skills/gdim-auto/SKILL.md" 2>/dev/null | head -1)
-  [ -z "$SKILL_FILE" ] && echo "SKILL.md not found, check plugin install" && exit 1
-  SKILL_DIR="$(cd "$(dirname "$SKILL_FILE")" && pwd)"
+  # 0) 可选显式覆盖（便于 CI/调试）
+  if [ -n "${GDIM_AUTO_SKILL_DIR:-}" ] && [ -f "${GDIM_AUTO_SKILL_DIR}/SKILL.md" ]; then
+    SKILL_DIR="$(cd "${GDIM_AUTO_SKILL_DIR}" && pwd)"
+  else
+    # 1) 常见安装位置优先（项目级 / 用户级）
+    CANDIDATES=(
+      "${PROJECT_ROOT}/skills/gdim-auto/SKILL.md"
+      "${PROJECT_ROOT}/.claude/skills/gdim-auto/SKILL.md"
+      "${PROJECT_ROOT}/.agents/skills/gdim-auto/SKILL.md"
+      "${PROJECT_ROOT}/.kiro/skills/gdim-auto/SKILL.md"
+      "${PROJECT_ROOT}/.codex/skills/gdim-auto/SKILL.md"
+      "${HOME}/.claude/skills/gdim-auto/SKILL.md"
+      "${HOME}/.agents/skills/gdim-auto/SKILL.md"
+      "${HOME}/.kiro/skills/gdim-auto/SKILL.md"
+      "${HOME}/.codex/skills/gdim-auto/SKILL.md"
+      "${CODEX_HOME:-${HOME}/.codex}/skills/gdim-auto/SKILL.md"
+    )
+
+    SKILL_FILE=""
+    for p in "${CANDIDATES[@]}"; do
+      if [ -f "$p" ]; then
+        SKILL_FILE="$p"
+        break
+      fi
+    done
+
+    # 2) fallback 扫描常见根目录（包含 Claude 插件缓存/安装目录）
+    if [ -z "$SKILL_FILE" ]; then
+      SEARCH_ROOTS=(
+        "${PROJECT_ROOT}"
+        "${HOME}/.claude/plugins"
+        "${HOME}/.claude"
+        "${HOME}/.agents"
+        "${HOME}/.kiro"
+        "${HOME}/.codex"
+        "${CODEX_HOME:-${HOME}/.codex}"
+      )
+      for root in "${SEARCH_ROOTS[@]}"; do
+        [ -d "$root" ] || continue
+        found=$(find "$root" -type f -path "*/gdim-auto/SKILL.md" 2>/dev/null | head -1)
+        if [ -n "$found" ]; then
+          SKILL_FILE="$found"
+          break
+        fi
+      done
+    fi
+
+    [ -z "$SKILL_FILE" ] && echo "gdim-auto SKILL.md not found; check skill installation path for current agent." && exit 1
+    SKILL_DIR="$(cd "$(dirname "$SKILL_FILE")" && pwd)"
+  fi
   ```
-  如果找不到，提示用户检查插件安装。
+  如果找不到，提示用户检查当前 agent 的 skill 安装目录（`.claude/skills`、`.agents/skills`、`.kiro/skills` 等）。
 
 由此得出：
 - **REFERENCE_DIR**: `${SKILL_DIR}/automation-ref` — 公共脚本的 source-of-truth
@@ -103,6 +149,16 @@ bash automation/ai-coding/sync-automation.sh "${REFERENCE_DIR}" automation/ai-co
   "project": "<task-slug>",
   "workflow_dir": ".ai-workflows/<YYYYMMDD>-<task-slug>",
   "design_doc": "<design-doc-path>",
+  "execution": {
+    "runner": "claude",
+    "kiro_agent": "gdim-kiro-opus",
+    "kiro_model": "opus"
+  },
+  "runners": {
+    "claude": { "command": "" },
+    "codex": { "command": "" },
+    "kiro": { "command": "", "agent": "gdim-kiro-opus" }
+  },
   "retry_limits": {
     "compile_failed": 2,
     "test_failed": 2,
@@ -116,6 +172,9 @@ bash automation/ai-coding/sync-automation.sh "${REFERENCE_DIR}" automation/ai-co
       "depends_on": [],
       "max_rounds": 12,
       "stage": "B",
+      "runner": "claude",
+      "runner_cmd": "",
+      "kiro_agent": "gdim-kiro-opus",
       "modules": ["<module-path>"],
       "allowed_paths": [
         "<module-path>/",
@@ -175,6 +234,9 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
 #   Unblock a flow:      ./run.sh --unblock <slug>
 #   Dry-run preview:     ./run.sh --dry-run
 #   Semi-auto mode:      ./run.sh --stage A
+#   Use codex runner:    ./run.sh --runner codex
+#   Use kiro runner:     ./run.sh --runner kiro --kiro-agent gdim-kiro-sonnet
+#   Custom executor cmd: ./run.sh --runner custom --runner-cmd 'my-runner --stdio'
 ```
 
 生成后执行 `chmod +x` 使其可执行。
@@ -212,6 +274,9 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
   ./run.sh --from 3           # 从第 3 个流程开始
   ./run.sh --unblock <slug>   # 解除阻塞
   ./run.sh --stage A          # 半自动模式（每轮人工确认）
+  ./run.sh --runner codex     # 使用 codex 执行器
+  ./run.sh --runner kiro --kiro-agent gdim-kiro-opus   # 使用 kiro + 指定 agent
+  ./run.sh --runner custom --runner-cmd '<your command>' # 自定义执行器命令
 ```
 
 ## 注意事项
@@ -219,6 +284,7 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
 - 不要修改 `automation/ai-coding/` 下的公共脚本内容（除非 sync 检测到需要更新）
 - `flows.json` 中的 `allowed_paths` 必须包含流程的工作流目录和涉及的模块目录
 - Intent 文件应该足够详细，让自动化 agent 能独立完成每个流程
+- 当 runner=kiro 时，运行前会自动检查并确保存在 `gdim-kiro-opus` 与 `gdim-kiro-sonnet` 两个 agent（包含 gdim skills 资源）
 - 如果设计文档内容不足以拆解为多个流程，可以只生成一个流程
 - 生成的所有文件使用 UTF-8 编码
 - 不要自动执行工作流；只输出启动指引，后续由用户在终端手动运行

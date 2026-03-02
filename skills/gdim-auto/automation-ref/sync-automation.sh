@@ -25,10 +25,12 @@ fi
 FILES=(
     "run-gdim-flows.sh"
     "run-gdim-round.sh"
+    "setup-kiro-agent.sh"
     "lib/log.sh"
     "lib/state.sh"
     "lib/validate.sh"
     "lib/prompt-builder.sh"
+    "lib/runner.sh"
     "templates/round-prompt.md.tpl"
     "templates/gdim-rules-injection.md"
     "templates/retry/compile-failed.md"

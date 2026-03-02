@@ -21,11 +21,11 @@
 `/gdim-auto` 用于**从设计文档自动生成多流程 GDIM 任务目录**，并提供可直接运行的自动化入口。适用于已有设计文档、希望快速拆解并批量执行 GDIM 流程的场景。
 
 ### 支持范围
-- 仅支持 Claude Code（依赖 AskUserQuestion/Skill 工具）。
-- Codex 支持计划中（未来会增强）。
+- `/gdim-auto` 命令本身仅支持 Claude Code（依赖 AskUserQuestion/Skill 工具）。
+- 由 `/gdim-auto` 生成的自动化脚本可在终端运行，并支持多执行器：`claude` / `codex` / `kiro` / 自定义命令。
 
 ### 运行依赖
-- `claude` CLI（自动化执行入口）
+- `claude` / `codex` / `kiro-cli`（按所选执行器需要）
 - `jq`（解析配置与状态）
 - `timeout`（流程超时控制）
 - `mvn`（Maven 项目的编译/测试门禁）
@@ -64,6 +64,9 @@
 - `--unblock <slug>`：解除阻塞流程
 - `--stage A|B|C`：覆盖所有流程的执行模式
 - `--skip-clean-check`：跳过工作区干净检查（不推荐）
+- `--runner <name>` / `--executor <name>`：指定执行器（`claude`/`codex`/`kiro`/自定义）
+- `--runner-cmd '<cmd>'`：覆盖执行器命令（stdin 接收 prompt）
+- `--kiro-agent <name>`：指定 Kiro agent
 
 ### 速查表
 
@@ -79,6 +82,8 @@
 | `./run.sh --stage A` | 半自动（每轮人工确认） |
 | `./run.sh --stage B` | 全自动（默认） |
 | `./run.sh --stage C` | 收敛阶段（更严格） |
+| `./run.sh --runner codex` | 使用 codex 执行器 |
+| `./run.sh --runner kiro --kiro-agent gdim-kiro-sonnet` | 使用 kiro + 指定 agent |
 
 关键产物速查：
 
@@ -96,6 +101,7 @@
 - 每个流程可配置 `allowed_paths`，越界修改会触发阻塞。
 - 默认进行编译/测试门禁（Maven 项目使用 `mvn compile/test -pl ... -am`）。
 - Stage A 需要人工确认继续；Stage B 全自动；Stage C 用于收敛阶段。
+- 当执行器为 `kiro` 时，会先自动检查并确保存在 `gdim-kiro-opus` 与 `gdim-kiro-sonnet` 两个 agent（包含 gdim skill 资源）。
 
 ### 同步公共脚本（automation/ai-coding）
 首次运行会复制 `sync-automation.sh` 到 `automation/ai-coding/`，随后执行同步检查。
@@ -148,6 +154,15 @@
   "project": "user-profile",
   "workflow_dir": ".ai-workflows/20260224-user-profile",
   "design_doc": "docs/design/user-profile.md",
+  "execution": {
+    "runner": "claude",
+    "kiro_agent": "gdim-kiro-opus"
+  },
+  "runners": {
+    "claude": { "command": "" },
+    "codex": { "command": "" },
+    "kiro": { "command": "", "agent": "gdim-kiro-opus" }
+  },
   "flows": [
     {
       "id": 1,
@@ -156,6 +171,7 @@
       "depends_on": [],
       "max_rounds": 12,
       "stage": "B",
+      "runner": "claude",
       "modules": ["backend/user-profile"],
       "allowed_paths": [
         "backend/user-profile/",
@@ -170,6 +186,7 @@
       "depends_on": [1],
       "max_rounds": 12,
       "stage": "B",
+      "runner": "claude",
       "modules": ["frontends/web"],
       "allowed_paths": [
         "frontends/web/",
@@ -187,6 +204,8 @@
 .ai-workflows/20260224-user-profile/run.sh
 ./run.sh --only 1
 ./run.sh --dry-run
+./run.sh --runner codex
+./run.sh --runner kiro --kiro-agent gdim-kiro-opus
 ```
 
 ## 何时查阅规范文档

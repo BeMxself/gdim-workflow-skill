@@ -6,9 +6,12 @@ This document helps you test the GDIM skills to ensure they work as intended.
 
 ## Prerequisites
 
-- `claude` CLI available in PATH
 - `jq` installed
 - `timeout` available
+- At least one runner CLI available in PATH:
+  - `claude` (for `--runner claude`)
+  - `codex` (for `--runner codex`)
+  - `kiro-cli` (for `--runner kiro`)
 - `mvn` installed if you want compile/test gates for Maven modules
 
 ## Test Scenarios
@@ -108,6 +111,35 @@ This document helps you test the GDIM skills to ensure they work as intended.
 6. **Expected**: Dry-run completes without path or missing-file errors
 
 **Pass criteria**: Task directory + automation scripts are generated and dry-run works
+
+---
+
+### Scenario 7: Multi-Executor Dry-Run Test
+
+**Goal**: Verify generated automation supports multiple runners
+
+**Steps**:
+1. Reuse the task directory from Scenario 6
+2. Run `./run.sh --dry-run --runner codex`
+3. **Expected**: Dry-run log indicates `runner=codex`
+4. Run `./run.sh --dry-run --runner kiro --kiro-agent gdim-kiro-opus`
+5. **Expected**: Dry-run log indicates `runner=kiro`
+
+**Pass criteria**: Runner override arguments are accepted and effective in dry-run
+
+---
+
+### Scenario 8: Kiro Agent Auto-Ensure Test
+
+**Goal**: Verify `runner=kiro` precheck ensures both opus and sonnet agents exist
+
+**Steps**:
+1. Run repository test script:
+   `bash skills/gdim-auto/automation-ref/tests/test-kiro-runner-precheck-ensures-dual-agents.sh`
+2. **Expected**: test passes and validates dual-agent bootstrap behavior
+3. Verify both agent files contain gdim skill resources and file-capable tools (as asserted by test)
+
+**Pass criteria**: Dual-agent bootstrap is idempotent and completes without manual setup
 
 ---
 
