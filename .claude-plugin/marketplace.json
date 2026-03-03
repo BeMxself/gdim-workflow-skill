@@ -9,7 +9,7 @@
       "name": "gdim-workflow",
       "source": "./",
       "description": "Gap-Driven Iteration Model (GDIM) - disciplined AI workflow with scope limiting, gap-driven iteration, and strict traceability",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "author": {
         "name": "songmingxu"
       }

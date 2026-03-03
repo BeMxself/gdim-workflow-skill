@@ -9,7 +9,7 @@ set -euo pipefail
 #          --workflow-dir DIR --intent-file FILE \
 #          --design-doc DOC --modules MODS \
 #          [--allowed-paths PATHS] [--stage A|B|C] [--runner NAME|--executor NAME] \
-#          [--runner-cmd CMD] [--kiro-agent NAME] [--dry-run] [--timeout MIN]
+#          [--runner-cmd CMD] [--kiro-agent NAME] [--skip-tests] [--dry-run] [--timeout MIN]
 #
 # Exit codes: 0=all gaps closed, 1=BLOCKED, 2=max rounds, 3=stalled
 
@@ -35,6 +35,12 @@ RUNNER_CMD_OVERRIDE=""
 KIRO_AGENT_OVERRIDE=""
 HEARTBEAT_SECONDS_RAW="${GDIM_HEARTBEAT_SECONDS:-20}"
 HEARTBEAT_SECONDS=20
+SKIP_TESTS_RAW="${GDIM_SKIP_TESTS:-0}"
+SKIP_TESTS=0
+
+case "${SKIP_TESTS_RAW}" in
+    1|true|TRUE|yes|YES|on|ON) SKIP_TESTS=1 ;;
+esac
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -49,6 +55,7 @@ while [[ $# -gt 0 ]]; do
         --dry-run)        DRY_RUN=1; shift ;;
         --timeout)        TIMEOUT_MINUTES="$2"; shift 2 ;;
         --skip-clean-check) SKIP_CLEAN_CHECK=1; shift ;;
+        --skip-tests)     SKIP_TESTS=1; shift ;;
         --task-dir)       TASK_DIR="$2"; shift 2 ;;
         --runner|--executor) RUNNER_OVERRIDE="$2"; shift 2 ;;
         --runner-cmd)     RUNNER_CMD_OVERRIDE="$2"; shift 2 ;;
@@ -58,7 +65,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$FLOW_SLUG" ] || [ -z "$WORKFLOW_DIR" ]; then
-    echo "Usage: $0 --flow-slug SLUG --workflow-dir DIR [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME] [options]" >&2
+    echo "Usage: $0 --flow-slug SLUG --workflow-dir DIR [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME] [--skip-tests] [options]" >&2
     exit 1
 fi
 
@@ -81,6 +88,7 @@ source "$SCRIPT_DIR/lib/prompt-builder.sh"
 source "$SCRIPT_DIR/lib/runner.sh"
 
 export CURRENT_FLOW="$FLOW_SLUG"
+export GDIM_SKIP_TESTS="$SKIP_TESTS"
 
 if [[ "$HEARTBEAT_SECONDS_RAW" =~ ^[0-9]+$ ]]; then
     HEARTBEAT_SECONDS="$HEARTBEAT_SECONDS_RAW"
@@ -484,6 +492,9 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
 
     # 4. Quality gates (external validation)
     log_info "Running quality gates..."
+    if [ "$SKIP_TESTS" -eq 1 ]; then
+        log_info "Quality gates configured with --skip-tests (mvn test will be skipped)"
+    fi
     append_round_event "$FLOW_SLUG" "$round" "quality_gates_started" "modules=${MODULES};allowed_paths=${ALLOWED_PATHS}"
     cd "$PROJECT_ROOT"
     gate_result=0

@@ -237,6 +237,7 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
 #   Unblock a flow:      ./run.sh --unblock <slug>
 #   Dry-run preview:     ./run.sh --dry-run
 #   Semi-auto mode:      ./run.sh --stage A
+#   Skip mvn test gate:  ./run.sh --skip-tests
 #   Use codex runner:    ./run.sh --runner codex
 #   Use kiro runner:     ./run.sh --runner kiro --kiro-agent gdim-kiro-sonnet
 #   Custom executor cmd: ./run.sh --runner custom --runner-cmd 'my-runner --stdio'
@@ -278,6 +279,7 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
   ./run.sh --from 3           # 从第 3 个流程开始
   ./run.sh --unblock <slug>   # 解除阻塞
   ./run.sh --stage A          # 半自动模式（每轮人工确认）
+  ./run.sh --skip-tests       # 跳过 mvn test 门禁（也可用 GDIM_SKIP_TESTS=1）
   ./run.sh --runner codex     # 使用 codex 执行器
   ./run.sh --runner kiro --kiro-agent gdim-kiro-opus   # 使用 kiro + 指定 agent
   ./run.sh --runner custom --runner-cmd '<your command>' # 自定义执行器命令

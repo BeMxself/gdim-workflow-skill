@@ -1,5 +1,22 @@
 # 更新日志
 
+## v1.5.0 - 2026-03-03
+
+### /gdim-auto 测试门禁可配置
+
+- 新增 `--skip-tests` 参数（`run-gdim-flows.sh` / `run-gdim-round.sh`）：
+  - 跳过 `mvn test` 门禁
+  - 保留 `mvn compile`、`path whitelist`、GDIM 文档完整性检查
+- 新增环境变量 `GDIM_SKIP_TESTS=1`（等效于 `--skip-tests`），便于批量执行或 CI 场景统一控制。
+- 日志增强：启用该模式时会显式输出测试门禁已跳过，避免长时间“无反馈”误判。
+
+### 文档与测试
+
+- 更新 `README.md` / `README.en.md` / `REFERENCE.md` / `skills/gdim-auto/SKILL.md`：
+  - 增补 `--skip-tests` 用法与适用场景说明。
+- 新增并通过自动化测试：
+  - `test-skip-tests-flag.sh`
+
 ## v1.4.0 - 2026-03-02
 
 ### /gdim-auto 执行与恢复增强

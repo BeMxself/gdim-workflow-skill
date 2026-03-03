@@ -10,6 +10,13 @@
 # Maven gate timeout (seconds). Override via MVN_GATE_TIMEOUT env var.
 MVN_GATE_TIMEOUT="${MVN_GATE_TIMEOUT:-600}"
 
+_gdim_truthy() {
+    case "${1:-}" in
+        1|true|TRUE|yes|YES|on|ON) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 # Match GDIM phase file with both naming conventions:
 #   Convention A (spec): {phase}.round{N}.md  e.g. 00-scope-definition.round1.md
 #   Convention B (legacy): *round{N}*{phase}*  e.g. R1-00-scope.md
@@ -74,7 +81,7 @@ run_quality_gates() {
     fi
 
     # Gate 2: Maven test (with timeout)
-    if [ -n "$modules" ]; then
+    if [ -n "$modules" ] && ! _gdim_truthy "${GDIM_SKIP_TESTS:-0}"; then
         local pl_arg_test
         pl_arg_test=$(echo "$modules" | tr ',' ',')
         log_info "Gate: mvn test -pl ${pl_arg_test} -am (timeout=${MVN_GATE_TIMEOUT}s)"
@@ -98,6 +105,8 @@ run_quality_gates() {
             fi
             GATE_FAILURES=$((GATE_FAILURES + 1))
         fi
+    elif [ -n "$modules" ]; then
+        VALIDATE_RESULT+="[SKIP] mvn test (disabled by --skip-tests/GDIM_SKIP_TESTS)\n"
     else
         VALIDATE_RESULT+="[SKIP] mvn test (no modules specified)\n"
     fi

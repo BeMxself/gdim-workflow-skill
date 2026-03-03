@@ -208,6 +208,7 @@ It generates:
 Run examples:
 - `.ai-workflows/YYYYMMDD-<task-slug>/run.sh`
 - `./run.sh --only N` / `./run.sh --from N` / `./run.sh --dry-run` / `./run.sh --stage A|B|C`
+- `./run.sh --skip-tests` (skip the `mvn test` gate; useful when you plan to run tests later in one batch)
 - `./run.sh --runner codex` / `./run.sh --runner kiro --kiro-agent gdim-kiro-opus`
 
 Dependencies:
@@ -339,4 +340,4 @@ These skills are designed to be iteratively improved:
 
 ## Version
 
-**v1.4.0** - Observability and resume upgrades (runner heartbeat, path_violation auto-expand, granular state events)
+**v1.5.0** - Configurable test gate release (`--skip-tests`/`GDIM_SKIP_TESTS=1`) for test-later workflows
