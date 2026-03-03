@@ -1,5 +1,27 @@
 # 更新日志
 
+## v1.5.1 - 2026-03-03
+
+### /gdim-auto Gap 退出判定稳定性增强
+
+- Gap Analysis 提示词中新增强制机器决策标记（单独一行，严格格式）：
+  - `GDIM_EXIT_DECISION: CONTINUE`
+  - `GDIM_EXIT_DECISION: FINAL_REPORT`
+  - `GDIM_EXIT_DECISION: BLOCKED`
+- `lib/validate.sh` 判定逻辑升级：
+  - 优先解析 `GDIM_EXIT_DECISION` 显式标记
+  - 自然语言 `Decision` 作为兼容回退，降低不同模型表述造成的误判。
+- `run-gdim-round.sh` 收敛逻辑增强：
+  - 当 Gap 明确给出 `FINAL_REPORT` 且当前轮无新 commit 时，若已有执行进展（或纯文档流）可直接收敛，避免反复开启新轮次。
+
+### 测试补充
+
+- 新增并通过：
+  - `test-gap-explicit-marker-priority-final.sh`
+  - `test-gap-final-decision-closes-round.sh`
+  - `test-gap-final-decision-closes-with-prior-execute-no-new-commit.sh`
+  - `test-gap-blocked-keyword-does-not-force-block.sh`
+
 ## v1.5.0 - 2026-03-03
 
 ### /gdim-auto 测试门禁可配置

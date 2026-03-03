@@ -17,6 +17,86 @@ _gdim_truthy() {
     esac
 }
 
+_gap_exit_decision_line() {
+    local gap_file="$1"
+    awk '
+        BEGIN { IGNORECASE=1 }
+        /^\*\*Decision\*\*:/ { sub(/^\*\*Decision\*\*:[[:space:]]*/, "", $0); print; exit }
+        /^Decision:/ { sub(/^Decision:[[:space:]]*/, "", $0); print; exit }
+        /^\*\*决策\*\*:/ { sub(/^\*\*决策\*\*:[[:space:]]*/, "", $0); print; exit }
+        /^决策:/ { sub(/^决策:[[:space:]]*/, "", $0); print; exit }
+    ' "$gap_file" 2>/dev/null || true
+}
+
+_gap_explicit_exit_decision() {
+    local gap_file="$1"
+    awk '
+        BEGIN { IGNORECASE=1; token="" }
+        /^[[:space:]]*GDIM_EXIT_DECISION[[:space:]]*:/ {
+            line=$0
+            sub(/^[[:space:]]*GDIM_EXIT_DECISION[[:space:]]*:[[:space:]]*/, "", line)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+            line=toupper(line)
+            if (line=="FINAL_REPORT" || line=="CONTINUE" || line=="BLOCKED") {
+                token=line
+            }
+        }
+        END { if (token != "") print token }
+    ' "$gap_file" 2>/dev/null || true
+}
+
+_gap_exit_decision_norm() {
+    local gap_file="$1"
+    local line=""
+    line=$(_gap_exit_decision_line "$gap_file")
+    if [ -z "$line" ]; then
+        return 0
+    fi
+    printf "%s" "$line" | tr '[:upper:]' '[:lower:]'
+}
+
+gap_decision_is_final() {
+    local gap_file="$1"
+    local explicit_decision=""
+    local decision_norm=""
+    explicit_decision=$(_gap_explicit_exit_decision "$gap_file")
+    if [ -n "$explicit_decision" ]; then
+        [ "$explicit_decision" = "FINAL_REPORT" ]
+        return $?
+    fi
+    decision_norm=$(_gap_exit_decision_norm "$gap_file")
+    [ -z "$decision_norm" ] && return 1
+    echo "$decision_norm" | grep -qiE 'generate final report|final report|finish|completed|complete|生成最终报告|最终报告|输出最终报告|完成并结束'
+}
+
+gap_decision_is_continue() {
+    local gap_file="$1"
+    local explicit_decision=""
+    local decision_norm=""
+    explicit_decision=$(_gap_explicit_exit_decision "$gap_file")
+    if [ -n "$explicit_decision" ]; then
+        [ "$explicit_decision" = "CONTINUE" ]
+        return $?
+    fi
+    decision_norm=$(_gap_exit_decision_norm "$gap_file")
+    [ -z "$decision_norm" ] && return 1
+    echo "$decision_norm" | grep -qiE 'continue|next round|继续|下一轮|继续到第|继续迭代'
+}
+
+gap_decision_is_blocked() {
+    local gap_file="$1"
+    local explicit_decision=""
+    local decision_norm=""
+    explicit_decision=$(_gap_explicit_exit_decision "$gap_file")
+    if [ -n "$explicit_decision" ]; then
+        [ "$explicit_decision" = "BLOCKED" ]
+        return $?
+    fi
+    decision_norm=$(_gap_exit_decision_norm "$gap_file")
+    [ -z "$decision_norm" ] && return 1
+    echo "$decision_norm" | grep -qiE 'blocked|human intervention|manual intervention|人工介入|阻塞'
+}
+
 # Match GDIM phase file with both naming conventions:
 #   Convention A (spec): {phase}.round{N}.md  e.g. 00-scope-definition.round1.md
 #   Convention B (legacy): *round{N}*{phase}*  e.g. R1-00-scope.md
@@ -190,7 +270,7 @@ run_quality_gates() {
     local gap_file
     gap_file=$(_find_gdim_phase_file "$workflow_dir" "$round" "gap-analysis")
     if [ -n "$gap_file" ]; then
-        if grep -qiE 'BLOCKED|未关闭|已关闭|Identified Gaps|No.*gap|Gap Closure' "$gap_file" 2>/dev/null; then
+        if grep -qiE 'GDIM_EXIT_DECISION|BLOCKED|未关闭|已关闭|Identified Gaps|No.*gap|Gap Closure' "$gap_file" 2>/dev/null; then
             VALIDATE_RESULT+="[PASS] gap file parseable\n"
         else
             VALIDATE_RESULT+="[WARN] gap file lacks expected keywords\n"
@@ -218,6 +298,12 @@ no_open_gaps() {
     if [ ! -f "$gap_file" ]; then
         return 1
     fi
+
+    # Prefer explicit exit decision semantics.
+    gap_decision_is_final "$gap_file" && return 0
+    gap_decision_is_continue "$gap_file" && return 1
+    gap_decision_is_blocked "$gap_file" && return 1
+
     # Must positively match a "closed" pattern to return 0
     if grep -qiE 'no.*open.*gap|all.*gap.*closed|无未关闭|所有.*gap.*已关闭|gap.*closure.*complete' "$gap_file" 2>/dev/null; then
         # Double-check: if specific gap IDs are marked open/unresolved, it's not closed
@@ -237,7 +323,15 @@ has_blocked_flag() {
     if [ ! -f "$gap_file" ]; then
         return 1
     fi
-    grep -qiE 'BLOCKED' "$gap_file" 2>/dev/null
+    # Prefer explicit exit decision semantics over keyword heuristics.
+    # Continue/final decisions should never be treated as BLOCKED even if
+    # the file contains per-gap "Status | BLOCKED" entries.
+    gap_decision_is_continue "$gap_file" && return 1
+    gap_decision_is_final "$gap_file" && return 1
+    gap_decision_is_blocked "$gap_file" && return 0
+
+    # Fallback: only block on explicit standalone blockers.
+    grep -qiE '^\s*(\*\*)?(decision|决策)(\*\*)?:\s*.*(blocked|human intervention|manual intervention|人工介入|阻塞)|^\s*\[?blocked\]?\s*$|^\s*blocked\s*:' "$gap_file" 2>/dev/null
 }
 
 # Check if new commits exist since last round

@@ -36,6 +36,10 @@
 - 每个阶段通过 Skill 调用执行，不要跳过任何阶段
 - 必须运行 mvn compile 验证编译通过
 - gap-analysis 是唯一的轮次出口，必须生成
+- Gap Analysis 末尾必须追加机器可解析决策行（单独一行，严格格式）：
+  - `GDIM_EXIT_DECISION: CONTINUE`
+  - `GDIM_EXIT_DECISION: FINAL_REPORT`
+  - `GDIM_EXIT_DECISION: BLOCKED`
 - 遇到阻塞（缺凭据/外部依赖/需人工）→ 在 gap 中标记 BLOCKED 并停止
 - 进展由自动化框架自动记录，无需手动创建或维护任何进展文件
 - 一次性 git commit 所有改动（代码 + GDIM 文件）

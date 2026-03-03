@@ -324,6 +324,18 @@ _tty_usable() {
     return 1
 }
 
+has_any_execute_phase_passed() {
+    local slug="$1"
+    local upto_round="$2"
+    local r=""
+    for ((r=1; r<=upto_round; r++)); do
+        if [ "$(get_phase_status "$slug" "$r" "execute")" = "passed" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 # --- Helper: Stage A human confirmation (ack file + TTY fallback) ---
 ACK_POLL_INTERVAL=10   # seconds between ack file checks
 ACK_TIMEOUT=1800       # 30 minutes default
@@ -642,6 +654,15 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
             # Verify at least one commit exists since baseline before accepting closure
             current_commit_count=$(git -C "$PROJECT_ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
             if [ "$current_commit_count" -le "$LAST_COMMIT_COUNT" ]; then
+                if gap_decision_is_final "$gap_file"; then
+                    if [ -z "$MODULES" ] || has_any_execute_phase_passed "$FLOW_SLUG" "$round"; then
+                        log_warn "No new commit in R${round}, but accepting explicit final decision"
+                        log_info "All gaps closed for ${FLOW_SLUG}"
+                        append_round_event "$FLOW_SLUG" "$round" "round_completed" "reason=final_decision_without_new_commit"
+                        append_progress "$FLOW_SLUG" "R${round}: ALL GAPS CLOSED (final decision, no new commit)"
+                        exit 0
+                    fi
+                fi
                 log_warn "Gap claims closed but no new commit since baseline — treating as stall"
                 append_progress "$FLOW_SLUG" "R${round}: gap-closed without commit, suspicious"
             else

@@ -44,6 +44,10 @@
 - 每轮只执行一个完整 GDIM 闭环，完成后必须退出
 - 必须运行 `mvn compile` 验证编译通过后再生成 summary
 - gap-analysis.md 是唯一的轮次出口，必须生成
+- gap-analysis 必须在文末输出机器可解析决策行（严格格式，单独一行）：
+  - `GDIM_EXIT_DECISION: CONTINUE`
+  - `GDIM_EXIT_DECISION: FINAL_REPORT`
+  - `GDIM_EXIT_DECISION: BLOCKED`
 - 遇到阻塞（缺凭据/外部依赖/需人工决策）→ 在 gap 中标记 `BLOCKED` 并立即停止
 - 不得跨轮次执行，不得在一次调用中完成多轮
 - 所有改动必须在本轮结束时一次性 git commit

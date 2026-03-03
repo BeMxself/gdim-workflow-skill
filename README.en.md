@@ -340,4 +340,4 @@ These skills are designed to be iteratively improved:
 
 ## Version
 
-**v1.5.0** - Configurable test gate release (`--skip-tests`/`GDIM_SKIP_TESTS=1`) for test-later workflows
+**v1.5.1** - Stable Gap exit decision parsing with explicit `GDIM_EXIT_DECISION` marker priority
