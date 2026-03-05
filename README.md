@@ -342,4 +342,4 @@ Gap 是“预期”与“实际”之间的 **结构性偏差**：
 
 ## 版本
 
-**v1.5.10** - `FINAL_REPORT` 先执行 `gdim-final` 再结束 flow，Final 输入收敛为 Intent + 各轮 gap-analysis
+**v1.6.0** - 每轮代码提交硬校验（默认开启）+ commit_missing 定向重试 + 重试默认 5 次且按失败类型独立计数

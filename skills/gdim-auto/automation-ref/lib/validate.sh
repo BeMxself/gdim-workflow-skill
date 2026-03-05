@@ -5,7 +5,7 @@
 # After run_quality_gates, check:
 #   VALIDATE_RESULT  — human-readable report
 #   GATE_FAILURES    — failure count
-#   FAILURE_TYPE     — "compile_failed"|"test_failed"|"malformed_output"|"path_violation"|""
+#   FAILURE_TYPE     — "compile_failed"|"test_failed"|"malformed_output"|"path_violation"|"commit_missing"|""
 
 # Maven gate timeout (seconds). Override via MVN_GATE_TIMEOUT env var.
 MVN_GATE_TIMEOUT="${MVN_GATE_TIMEOUT:-600}"
@@ -298,7 +298,66 @@ run_quality_gates() {
         VALIDATE_RESULT+="[MISS] gap file not found for parsing\n"
     fi
 
-    # Gate 5: Git commit exists for this round
+    # Gate 5: Round code changes must be committed (when enabled)
+    # This enforces code-commit discipline without forcing workflow-artifact
+    # commits under the current task directory.
+    if _gdim_truthy "${GDIM_ENFORCE_ROUND_CODE_COMMIT:-0}"; then
+        local repo_root
+        local workflow_rel
+        local task_base_rel
+        local staged_pending
+        local unstaged_pending
+        local untracked_pending
+        local pending_files
+        local pending_code_files=""
+        local file=""
+        local skip_file=0
+
+        repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+        workflow_rel="$workflow_dir"
+        if [[ "$workflow_rel" == "$repo_root/"* ]]; then
+            workflow_rel="${workflow_rel#"$repo_root"/}"
+        fi
+        task_base_rel="$workflow_rel"
+        if [[ "$workflow_rel" == */* ]]; then
+            task_base_rel="${workflow_rel%/*}"
+        fi
+
+        staged_pending=$(git diff --name-only --cached 2>/dev/null || echo "")
+        unstaged_pending=$(git diff --name-only 2>/dev/null || echo "")
+        untracked_pending=$(git ls-files --others --exclude-standard 2>/dev/null || echo "")
+        pending_files=$(printf '%s\n%s\n%s\n' "$staged_pending" "$unstaged_pending" "$untracked_pending" | sort -u | grep -v '^$' || true)
+
+        if [ -n "$pending_files" ]; then
+            while IFS= read -r file; do
+                [ -z "$file" ] && continue
+                skip_file=0
+                if [ -n "$task_base_rel" ] && [[ "$file" == "$task_base_rel/"* ]]; then
+                    skip_file=1
+                fi
+                if [[ "$file" == .kiro/* || "$file" == .claude/* || "$file" == .codex/* ]]; then
+                    skip_file=1
+                fi
+                if [ "$skip_file" -eq 0 ]; then
+                    pending_code_files+="  ${file}\n"
+                fi
+            done <<< "$pending_files"
+        fi
+
+        if [ -n "$pending_code_files" ]; then
+            VALIDATE_RESULT+="[FAIL] round code changes are not committed:\n${pending_code_files}"
+            if [ -z "$FAILURE_TYPE" ]; then
+                FAILURE_TYPE="commit_missing"
+            fi
+            GATE_FAILURES=$((GATE_FAILURES + 1))
+        else
+            VALIDATE_RESULT+="[PASS] round code changes committed\n"
+        fi
+    else
+        VALIDATE_RESULT+="[SKIP] round code commit enforcement disabled\n"
+    fi
+
+    # Gate 6: Git commit exists for this round
     local commit_marker="${flow_slug}.*R${round}\|R${round}.*${flow_slug}\|round.*${round}"
     if git log --oneline -5 2>/dev/null | grep -qiE "$commit_marker"; then
         VALIDATE_RESULT+="[PASS] git commit found\n"

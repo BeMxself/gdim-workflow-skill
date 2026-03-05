@@ -1,5 +1,25 @@
 # 更新日志
 
+## v1.6.0 - 2026-03-05
+
+### /gdim-auto 轮次提交纪律与重试体系升级
+
+- 新增“每轮代码必须提交”硬校验（默认开启，支持 `--no-enforce-round-code-commit` 关闭）：
+  - 质量门禁新增 `commit_missing` 失败类型
+  - 当检测到本轮代码未提交时，自动进入定向 retry
+- 新增 `templates/retry/commit-missing.md`，要求 agent 仅修复提交问题并生成符合轮次标记的提交信息。
+- Gap 阶段提示词增强：明确要求本轮末尾执行 `git add + git commit`，且提交信息需包含 `gdim(<flow>): R<round>`。
+- `retry_limits` 默认值升级为 `5/5/5`（compile/test/malformed），并新增 `commit_missing: 5`。
+- 重试计数改为按失败类型独立统计（compile/test/malformed/commit 各自计数），避免跨类型串扰。
+- 修复 `FINAL_REPORT` 产物提交流程：`99-final-report.md` 纳入自动提交，且 final 阶段后补一次文档自动提交，避免后续 flow 因工作区不干净被阻塞。
+
+### 测试补充
+
+- 新增并通过：
+  - `test-enforce-round-code-commit-retry.sh`
+  - `test-retry-default-5-and-independent-counts.sh`
+  - `test-final-report-auto-commit-keeps-workspace-clean.sh`
+
 ## v1.5.10 - 2026-03-05
 
 ### /gdim-auto FINAL_REPORT 收敛阶段强化

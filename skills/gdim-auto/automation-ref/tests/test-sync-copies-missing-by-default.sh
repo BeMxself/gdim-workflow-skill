@@ -29,6 +29,7 @@ files=(
   "templates/retry/compile-failed.md"
   "templates/retry/test-failed.md"
   "templates/retry/malformed-output.md"
+  "templates/retry/commit-missing.md"
 )
 
 for f in "${files[@]}"; do

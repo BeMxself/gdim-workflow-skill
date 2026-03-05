@@ -7,6 +7,7 @@ set -euo pipefail
 # Usage: ./automation/ai-coding/run-gdim-flows.sh --task-dir DIR [--from N] [--only N] [--dry-run]
 #          [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME]
 #          [--stall-limit N] [--skip-tests]
+#          [--enforce-round-code-commit|--no-enforce-round-code-commit]
 #          [--auto-commit-gdim-docs|--no-auto-commit-gdim-docs]
 # Exit codes: 0=all done, 1=blocked, 2=max rounds, 3=stalled
 
@@ -27,11 +28,18 @@ RUNNER_CMD_OVERRIDE=""
 KIRO_AGENT_OVERRIDE=""
 STALL_LIMIT_OVERRIDE=""
 AUTO_COMMIT_GDIM_DOCS_OVERRIDE=""
+ENFORCE_ROUND_CODE_COMMIT_OVERRIDE="${GDIM_ENFORCE_ROUND_CODE_COMMIT:-1}"
 SKIP_TESTS_RAW="${GDIM_SKIP_TESTS:-0}"
 SKIP_TESTS=0
 
 case "${SKIP_TESTS_RAW}" in
     1|true|TRUE|yes|YES|on|ON) SKIP_TESTS=1 ;;
+esac
+
+case "${ENFORCE_ROUND_CODE_COMMIT_OVERRIDE}" in
+    1|true|TRUE|yes|YES|on|ON) ENFORCE_ROUND_CODE_COMMIT_OVERRIDE="1" ;;
+    0|false|FALSE|no|NO|off|OFF) ENFORCE_ROUND_CODE_COMMIT_OVERRIDE="0" ;;
+    *) ENFORCE_ROUND_CODE_COMMIT_OVERRIDE="1" ;;
 esac
 
 while [[ $# -gt 0 ]]; do
@@ -48,10 +56,12 @@ while [[ $# -gt 0 ]]; do
         --runner-cmd) RUNNER_CMD_OVERRIDE="$2"; shift 2 ;;
         --kiro-agent) KIRO_AGENT_OVERRIDE="$2"; shift 2 ;;
         --stall-limit) STALL_LIMIT_OVERRIDE="$2"; shift 2 ;;
+        --enforce-round-code-commit) ENFORCE_ROUND_CODE_COMMIT_OVERRIDE="1"; shift ;;
+        --no-enforce-round-code-commit) ENFORCE_ROUND_CODE_COMMIT_OVERRIDE="0"; shift ;;
         --auto-commit-gdim-docs) AUTO_COMMIT_GDIM_DOCS_OVERRIDE="1"; shift ;;
         --no-auto-commit-gdim-docs) AUTO_COMMIT_GDIM_DOCS_OVERRIDE="0"; shift ;;
         -h|--help)
-            echo "Usage: $0 --task-dir DIR [--from N] [--only N] [--dry-run] [--unblock SLUG] [--stage A|B|C] [--skip-clean-check] [--skip-tests] [--stall-limit N] [--auto-commit-gdim-docs|--no-auto-commit-gdim-docs] [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME]"
+            echo "Usage: $0 --task-dir DIR [--from N] [--only N] [--dry-run] [--unblock SLUG] [--stage A|B|C] [--skip-clean-check] [--skip-tests] [--stall-limit N] [--enforce-round-code-commit|--no-enforce-round-code-commit] [--auto-commit-gdim-docs|--no-auto-commit-gdim-docs] [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME]"
             echo "  --task-dir DIR       Task directory (required; config/state/logs read from here)"
             echo "  --from N             Start from flow number N"
             echo "  --only N             Run only flow number N"
@@ -61,6 +71,8 @@ while [[ $# -gt 0 ]]; do
             echo "  --skip-clean-check   Skip clean workspace preflight check"
             echo "  --skip-tests         Skip mvn test gate (or set GDIM_SKIP_TESTS=1)"
             echo "  --stall-limit N      Stall threshold (consecutive rounds without commit, default 5)"
+            echo "  --enforce-round-code-commit     Require code changes to be committed per round (default)"
+            echo "  --no-enforce-round-code-commit  Disable per-round code commit enforcement"
             echo "  --auto-commit-gdim-docs     Auto-commit per-round GDIM docs (default)"
             echo "  --no-auto-commit-gdim-docs  Disable per-round GDIM docs auto-commit"
             echo "  --runner NAME        Override runner for all flows (claude/codex/kiro/custom)"
@@ -244,6 +256,11 @@ for (( i=0; i<FLOW_COUNT; i++ )); do
         round_cmd+=(--auto-commit-gdim-docs)
     elif [ "$AUTO_COMMIT_GDIM_DOCS_OVERRIDE" = "0" ]; then
         round_cmd+=(--no-auto-commit-gdim-docs)
+    fi
+    if [ "$ENFORCE_ROUND_CODE_COMMIT_OVERRIDE" = "1" ]; then
+        round_cmd+=(--enforce-round-code-commit)
+    elif [ "$ENFORCE_ROUND_CODE_COMMIT_OVERRIDE" = "0" ]; then
+        round_cmd+=(--no-enforce-round-code-commit)
     fi
 
     "${round_cmd[@]}" || exit_code=$?

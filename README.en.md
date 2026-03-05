@@ -342,4 +342,4 @@ These skills are designed to be iteratively improved:
 
 ## Version
 
-**v1.5.10** - `FINAL_REPORT` now runs `gdim-final` before flow close; final inputs reduced to Intent + per-round gap-analysis
+**v1.6.0** - Enforced per-round code commits (default on) + commit-missing directed retry + retry default raised to 5 with per-failure-type counters

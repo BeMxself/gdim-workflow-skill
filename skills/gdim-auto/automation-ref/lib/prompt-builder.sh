@@ -132,7 +132,9 @@ build_prompt() {
 4. gap-analysis 末尾必须追加机器可解析决策行（单独一行）：
    - \`GDIM_EXIT_DECISION: CONTINUE\`
    - \`GDIM_EXIT_DECISION: FINAL_REPORT\`
-   - \`GDIM_EXIT_DECISION: BLOCKED\`"
+   - \`GDIM_EXIT_DECISION: BLOCKED\`
+5. 本轮结束前必须提交代码变更：检查并提交当前任务目录（\`${workflow_base}\`）之外的代码文件。
+6. 必须执行 \`git add\` + \`git commit\`，提交信息由你基于本轮改动生成，且需包含标记：\`gdim(${flow_slug}): R${round}\`。"
             ;;
         *)
             round_task="1. ${resume_note}
@@ -231,6 +233,7 @@ build_retry_prompt() {
     output=$(cat "$template_file")
     output=$(echo "$output" | sed "s|{{ROUND}}|${round}|g")
     output=$(echo "$output" | sed "s|{{MODULES}}|${modules}|g")
+    output=$(echo "$output" | sed "s|{{FLOW_SLUG}}|${FLOW_SLUG:-unknown-flow}|g")
 
     # Inject error log or missing files via temp file + awk
     local tmp_dir

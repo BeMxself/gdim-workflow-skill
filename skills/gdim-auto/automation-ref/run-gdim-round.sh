@@ -10,6 +10,7 @@ set -euo pipefail
 #          --design-doc DOC --modules MODS \
 #          [--allowed-paths PATHS] [--stage A|B|C] [--runner NAME|--executor NAME] \
 #          [--runner-cmd CMD] [--kiro-agent NAME] [--stall-limit N] \
+#          [--enforce-round-code-commit|--no-enforce-round-code-commit] \
 #          [--skip-tests] [--auto-commit-gdim-docs|--no-auto-commit-gdim-docs] \
 #          [--dry-run] [--timeout MIN]
 #
@@ -42,6 +43,8 @@ SKIP_TESTS=0
 STALL_LIMIT_RAW="${GDIM_STALL_LIMIT:-5}"
 AUTO_COMMIT_GDIM_DOCS_RAW="${GDIM_AUTO_COMMIT_GDIM_DOCS:-1}"
 AUTO_COMMIT_GDIM_DOCS=1
+ENFORCE_ROUND_CODE_COMMIT_RAW="${GDIM_ENFORCE_ROUND_CODE_COMMIT:-0}"
+ENFORCE_ROUND_CODE_COMMIT=0
 
 case "${SKIP_TESTS_RAW}" in
     1|true|TRUE|yes|YES|on|ON) SKIP_TESTS=1 ;;
@@ -50,6 +53,10 @@ esac
 case "${AUTO_COMMIT_GDIM_DOCS_RAW}" in
     0|false|FALSE|no|NO|off|OFF) AUTO_COMMIT_GDIM_DOCS=0 ;;
     1|true|TRUE|yes|YES|on|ON) AUTO_COMMIT_GDIM_DOCS=1 ;;
+esac
+
+case "${ENFORCE_ROUND_CODE_COMMIT_RAW}" in
+    1|true|TRUE|yes|YES|on|ON) ENFORCE_ROUND_CODE_COMMIT=1 ;;
 esac
 
 while [[ $# -gt 0 ]]; do
@@ -71,6 +78,8 @@ while [[ $# -gt 0 ]]; do
         --runner-cmd)     RUNNER_CMD_OVERRIDE="$2"; shift 2 ;;
         --kiro-agent)     KIRO_AGENT_OVERRIDE="$2"; shift 2 ;;
         --stall-limit)    STALL_LIMIT_RAW="$2"; shift 2 ;;
+        --enforce-round-code-commit) ENFORCE_ROUND_CODE_COMMIT=1; shift ;;
+        --no-enforce-round-code-commit) ENFORCE_ROUND_CODE_COMMIT=0; shift ;;
         --auto-commit-gdim-docs) AUTO_COMMIT_GDIM_DOCS=1; shift ;;
         --no-auto-commit-gdim-docs) AUTO_COMMIT_GDIM_DOCS=0; shift ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
@@ -78,7 +87,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$FLOW_SLUG" ] || [ -z "$WORKFLOW_DIR" ]; then
-    echo "Usage: $0 --flow-slug SLUG --workflow-dir DIR [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME] [--stall-limit N] [--skip-tests] [--auto-commit-gdim-docs|--no-auto-commit-gdim-docs] [options]" >&2
+    echo "Usage: $0 --flow-slug SLUG --workflow-dir DIR [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME] [--stall-limit N] [--enforce-round-code-commit|--no-enforce-round-code-commit] [--skip-tests] [--auto-commit-gdim-docs|--no-auto-commit-gdim-docs] [options]" >&2
     exit 1
 fi
 
@@ -102,6 +111,7 @@ source "$SCRIPT_DIR/lib/runner.sh"
 
 export CURRENT_FLOW="$FLOW_SLUG"
 export GDIM_SKIP_TESTS="$SKIP_TESTS"
+export GDIM_ENFORCE_ROUND_CODE_COMMIT="$ENFORCE_ROUND_CODE_COMMIT"
 
 if [[ "$HEARTBEAT_SECONDS_RAW" =~ ^[0-9]+$ ]]; then
     HEARTBEAT_SECONDS="$HEARTBEAT_SECONDS_RAW"
@@ -127,9 +137,10 @@ if [ -n "${TASK_DIR:-}" ]; then
 else
     CONFIG_FILE="${SCRIPT_DIR}/config/flows.json"
 fi
-RETRY_COMPILE=$(jq -r '.retry_limits.compile_failed // 2' "$CONFIG_FILE" 2>/dev/null || echo 2)
-RETRY_TEST=$(jq -r '.retry_limits.test_failed // 2' "$CONFIG_FILE" 2>/dev/null || echo 2)
-RETRY_MALFORMED=$(jq -r '.retry_limits.malformed_output // 1' "$CONFIG_FILE" 2>/dev/null || echo 1)
+RETRY_COMPILE=$(jq -r '.retry_limits.compile_failed // 5' "$CONFIG_FILE" 2>/dev/null || echo 5)
+RETRY_TEST=$(jq -r '.retry_limits.test_failed // 5' "$CONFIG_FILE" 2>/dev/null || echo 5)
+RETRY_MALFORMED=$(jq -r '.retry_limits.malformed_output // 5' "$CONFIG_FILE" 2>/dev/null || echo 5)
+RETRY_COMMIT=$(jq -r '.retry_limits.commit_missing // 5' "$CONFIG_FILE" 2>/dev/null || echo 5)
 
 RUNNER="$(jq -r '.execution.runner // .executor // "claude"' "$CONFIG_FILE" 2>/dev/null || echo "claude")"
 if [ -n "$RUNNER_OVERRIDE" ]; then
@@ -422,6 +433,8 @@ auto_commit_round_gdim_docs() {
     [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
     abs_file="$(resolve_phase_file_for_round "gap-analysis" "$round")"
     [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
+    abs_file="${WORKFLOW_DIR_ABS}/99-final-report.md"
+    [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
 
     [ "${#doc_files[@]}" -gt 0 ] || return 0
 
@@ -490,7 +503,7 @@ build_flow_final_prompt() {
 - 本会话只允许执行：\`/gdim-final\`
 - 输入文件只允许使用：Intent + 每轮 Gap Analysis
 - 必须先逐个读取下方“过程输入文件”，再生成最终报告
-- 若有必要，可自行读取其他过程文件补充事实
+- 若有必要，可自行读取其他过程文件补充事实，但无需在输出中枚举这些文件名
 - 最终报告必须写入：\`${final_report_file}\`
 
 ## 过程输入文件（必须读取）
@@ -533,6 +546,10 @@ run_flow_final_stage() {
         append_progress "$FLOW_SLUG" "R${round}: gdim-final failed (exit=${final_exit})"
         return $final_exit
     fi
+
+    # gdim-final runs after per-round auto-commit point; commit final artifacts
+    # (notably 99-final-report.md) to keep workspace clean for next flow.
+    auto_commit_round_gdim_docs "$round"
 
     append_round_event "$FLOW_SLUG" "$round" "final_stage_completed" "flow=${FLOW_SLUG}"
     append_progress "$FLOW_SLUG" "R${round}: gdim-final completed"
@@ -948,13 +965,37 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
     if [ "$gate_result" -ne 0 ] && [ -n "$FAILURE_TYPE" ]; then
         local_retry_count=0
         local_retry_max=0
+        retry_total_count=0
+        retry_compile_count=0
+        retry_test_count=0
+        retry_malformed_count=0
+        retry_commit_count=0
         while true; do
             case "$FAILURE_TYPE" in
-                compile_failed)    local_retry_max=$RETRY_COMPILE ;;
-                test_failed)       local_retry_max=$RETRY_TEST ;;
-                malformed_output)  local_retry_max=$RETRY_MALFORMED ;;
-                path_violation)    local_retry_max=0 ;;  # handled by allowed_paths auto-expand
-                *)                 local_retry_max=0 ;;
+                compile_failed)
+                    local_retry_max=$RETRY_COMPILE
+                    local_retry_count=$retry_compile_count
+                    ;;
+                test_failed)
+                    local_retry_max=$RETRY_TEST
+                    local_retry_count=$retry_test_count
+                    ;;
+                malformed_output)
+                    local_retry_max=$RETRY_MALFORMED
+                    local_retry_count=$retry_malformed_count
+                    ;;
+                commit_missing)
+                    local_retry_max=$RETRY_COMMIT
+                    local_retry_count=$retry_commit_count
+                    ;;
+                path_violation)
+                    local_retry_max=0  # handled by allowed_paths auto-expand
+                    local_retry_count=0
+                    ;;
+                *)
+                    local_retry_max=0
+                    local_retry_count=0
+                    ;;
             esac
 
             if [ "$gate_result" -eq 0 ] || [ -z "$FAILURE_TYPE" ]; then
@@ -993,6 +1034,13 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
             fi
 
             local_retry_count=$((local_retry_count + 1))
+            retry_total_count=$((retry_total_count + 1))
+            case "$FAILURE_TYPE" in
+                compile_failed)   retry_compile_count=$local_retry_count ;;
+                test_failed)      retry_test_count=$local_retry_count ;;
+                malformed_output) retry_malformed_count=$local_retry_count ;;
+                commit_missing)   retry_commit_count=$local_retry_count ;;
+            esac
             log_warn "Retry ${local_retry_count}/${local_retry_max} for ${FAILURE_TYPE}"
             append_round_event "$FLOW_SLUG" "$round" "retry_started" "retry=${local_retry_count}/${local_retry_max};failure_type=${FAILURE_TYPE}"
             append_progress "$FLOW_SLUG" "R${round}: retry ${local_retry_count}/${local_retry_max} (${FAILURE_TYPE})"
@@ -1007,9 +1055,9 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
                 "$error_log_for_retry" "$VALIDATE_RESULT")
 
             if [ -n "${TASK_DIR:-}" ]; then
-                retry_log="${TASK_DIR}/logs/${FLOW_SLUG}-R${round}-retry${local_retry_count}.log"
+                retry_log="${TASK_DIR}/logs/${FLOW_SLUG}-R${round}-retry-${FAILURE_TYPE}-${local_retry_count}.log"
             else
-                retry_log="${SCRIPT_DIR}/../automation-logs/${FLOW_SLUG}-R${round}-retry${local_retry_count}.log"
+                retry_log="${SCRIPT_DIR}/../automation-logs/${FLOW_SLUG}-R${round}-retry-${FAILURE_TYPE}-${local_retry_count}.log"
             fi
             retry_exit=0
             export CURRENT_STAGE="retry-${FAILURE_TYPE}-${local_retry_count}"
@@ -1026,7 +1074,11 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         done
 
         # Audit: record retries
-        set_round_field "$FLOW_SLUG" "retries" "$local_retry_count"
+        set_round_field "$FLOW_SLUG" "retries" "$retry_total_count"
+        set_round_field "$FLOW_SLUG" "retries_compile" "$retry_compile_count"
+        set_round_field "$FLOW_SLUG" "retries_test" "$retry_test_count"
+        set_round_field "$FLOW_SLUG" "retries_malformed" "$retry_malformed_count"
+        set_round_field "$FLOW_SLUG" "retries_commit" "$retry_commit_count"
 
         # Refresh phase status after retries (Issue #5)
         detect_phase_status "$FLOW_SLUG" "$round" "$WORKFLOW_DIR_ABS" "$BASELINE_COMMIT"
@@ -1035,6 +1087,32 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
 
         # If still failing after retries, mark blocked
         if [ "$gate_result" -ne 0 ] && [ -n "$FAILURE_TYPE" ]; then
+            case "$FAILURE_TYPE" in
+                compile_failed)
+                    local_retry_max=$RETRY_COMPILE
+                    local_retry_count=$retry_compile_count
+                    ;;
+                test_failed)
+                    local_retry_max=$RETRY_TEST
+                    local_retry_count=$retry_test_count
+                    ;;
+                malformed_output)
+                    local_retry_max=$RETRY_MALFORMED
+                    local_retry_count=$retry_malformed_count
+                    ;;
+                commit_missing)
+                    local_retry_max=$RETRY_COMMIT
+                    local_retry_count=$retry_commit_count
+                    ;;
+                path_violation)
+                    local_retry_max=0
+                    local_retry_count=0
+                    ;;
+                *)
+                    local_retry_max=0
+                    local_retry_count=0
+                    ;;
+            esac
             if [ "$FAILURE_TYPE" = "path_violation" ] || [ "$local_retry_count" -ge "$local_retry_max" ]; then
                 log_error "Gate failure persists after ${local_retry_count} retries (${FAILURE_TYPE}), marking BLOCKED"
                 append_round_event "$FLOW_SLUG" "$round" "round_blocked" "failure_type=${FAILURE_TYPE};retries=${local_retry_count}"
@@ -1044,6 +1122,10 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         fi
     else
         set_round_field "$FLOW_SLUG" "retries" "0"
+        set_round_field "$FLOW_SLUG" "retries_compile" "0"
+        set_round_field "$FLOW_SLUG" "retries_test" "0"
+        set_round_field "$FLOW_SLUG" "retries_malformed" "0"
+        set_round_field "$FLOW_SLUG" "retries_commit" "0"
     fi
 
     # 6. Parse gap file

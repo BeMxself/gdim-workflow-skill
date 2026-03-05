@@ -163,9 +163,10 @@ bash automation/ai-coding/sync-automation.sh "${REFERENCE_DIR}" automation/ai-co
     "kiro": { "command": "", "agent": "gdim-kiro-opus" }
   },
   "retry_limits": {
-    "compile_failed": 2,
-    "test_failed": 2,
-    "malformed_output": 1
+    "compile_failed": 5,
+    "test_failed": 5,
+    "malformed_output": 5,
+    "commit_missing": 5
   },
   "flows": [
     {

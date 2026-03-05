@@ -1,7 +1,7 @@
 你正在执行 GDIM 自动化工作流（单阶段会话）。
 
 ## Gap 阶段专用规则
-- 本会话只允许执行：`{{CURRENT_STAGE_CMD}}`
+- 本会话只允许执行 GDIM 命令：`{{CURRENT_STAGE_CMD}}`（允许执行必要的 git 状态/提交命令）
 - 只做 Gap Analysis，不回头重做 scope/design/plan/execute/summary
 - Gap 分类遵循 G1-G6，结论需可追溯到本轮事实
 - Gap Analysis 是本轮唯一出口
@@ -40,6 +40,8 @@
 - 产出/更新本轮 gap-analysis 文件：`{{ROUND_GAP_FILE}}`
 - 明确哪些 Gap 已关闭，哪些需进入下一轮
 - Exit Decision 必须给出继续/收敛结论（下一轮参考：R{{NEXT_ROUND}}）
+- 若存在当前任务目录（`{{WORKFLOW_DIR}}` 所属任务目录）之外的代码改动，必须在本会话执行 `git add` + `git commit` 完成提交
+- 提交信息由你生成，且必须包含轮次标记：`gdim({{FLOW_SLUG}}): R{{ROUND}}`
 - 文末必须追加机器可解析决策行（单独一行）：
   - `GDIM_EXIT_DECISION: CONTINUE`
   - `GDIM_EXIT_DECISION: FINAL_REPORT`
