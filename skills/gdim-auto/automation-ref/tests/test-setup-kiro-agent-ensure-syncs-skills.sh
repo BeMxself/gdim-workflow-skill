@@ -7,6 +7,7 @@ SETUP_SCRIPT="${SCRIPT_DIR}/../setup-kiro-agent.sh"
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "${tmp_dir}"' EXIT
 
+fake_home="${tmp_dir}/home"
 project_root="${tmp_dir}/project"
 skills_source="${tmp_dir}/skills-source"
 
@@ -25,6 +26,8 @@ cat >"${skills_source}/gdim-design/SKILL.md" <<'MD'
 # gdim-design
 MD
 
+HOME="${fake_home}" \
+CODEX_HOME="${fake_home}/.codex" \
 GDIM_SKILLS_SOURCE_DIR="${skills_source}" \
   bash "${SETUP_SCRIPT}" --project-root "${project_root}" --ensure >/dev/null
 
@@ -33,8 +36,8 @@ sonnet_agent="${project_root}/.kiro/agents/gdim-kiro-sonnet.json"
 [[ -f "${opus_agent}" ]] || { echo "expected opus agent"; exit 1; }
 [[ -f "${sonnet_agent}" ]] || { echo "expected sonnet agent"; exit 1; }
 
-[[ -f "${project_root}/.kiro/skills/gdim/SKILL.md" ]] || { echo "expected synced gdim skill"; exit 1; }
-[[ -f "${project_root}/.kiro/skills/gdim-scope/SKILL.md" ]] || { echo "expected synced gdim-scope skill"; exit 1; }
-[[ -f "${project_root}/.kiro/skills/gdim-design/SKILL.md" ]] || { echo "expected synced gdim-design skill"; exit 1; }
+[[ -f "${fake_home}/.kiro/skills/gdim/SKILL.md" ]] || { echo "expected synced gdim skill"; exit 1; }
+[[ -f "${fake_home}/.kiro/skills/gdim-scope/SKILL.md" ]] || { echo "expected synced gdim-scope skill"; exit 1; }
+[[ -f "${fake_home}/.kiro/skills/gdim-design/SKILL.md" ]] || { echo "expected synced gdim-design skill"; exit 1; }
 
-echo "PASS: setup-kiro-agent --ensure syncs gdim skills into .kiro/skills"
+echo "PASS: setup-kiro-agent --ensure syncs gdim skills into ~/.kiro/skills"

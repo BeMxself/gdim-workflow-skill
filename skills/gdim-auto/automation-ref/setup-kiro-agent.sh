@@ -29,7 +29,7 @@ PROJECT_ROOT="$(detect_default_project_root)"
 DEFAULT_OPUS_AGENT="gdim-kiro-opus"
 DEFAULT_OPUS_MODEL="claude-opus-4.6"
 DEFAULT_SONNET_AGENT="gdim-kiro-sonnet"
-DEFAULT_SONNET_MODEL="claude-sonnet-4.5"
+DEFAULT_SONNET_MODEL="claude-sonnet-4.6"
 
 TARGET_AGENT_NAME=""
 TARGET_MODEL_NAME=""
@@ -49,7 +49,7 @@ Options:
   --project-root <dir>  Target project root (default: auto-detected from git/script location)
   --agent-name <name>   Single-agent mode: target agent name
   --model <model-id>    Single-agent mode: model id (default: claude-opus-4.6)
-  --ensure              Create/repair agents and sync GDIM skills to .kiro/skills (idempotent)
+  --ensure              Create/repair agents and sync GDIM skills to ~/.kiro/skills (idempotent)
   --force               Always overwrite target file(s)
   -h, --help            Show help
 
@@ -86,7 +86,6 @@ find_gdim_skill_source() {
 
   local candidates=(
     "${PROJECT_ROOT}/skills"
-    "${PROJECT_ROOT}/.kiro/skills"
     "${PROJECT_ROOT}/.agents/skills"
     "${PROJECT_ROOT}/.codex/skills"
     "${CODEX_HOME:-${HOME}/.codex}/skills"
@@ -153,13 +152,13 @@ copy_skill_dir() {
 
 sync_gdim_skills() {
   local source_root=""
-  local target_root="${PROJECT_ROOT}/.kiro/skills"
+  local target_root="${HOME}/.kiro/skills"
   local skill=""
   local copied=0
 
   source_root="$(find_gdim_skill_source || true)"
   if [[ -z "${source_root}" ]]; then
-    echo "WARN: GDIM skill source not found; skip syncing .kiro/skills" >&2
+    echo "WARN: GDIM skill source not found; skip syncing ~/.kiro/skills" >&2
     return 0
   fi
 
@@ -213,7 +212,7 @@ agent_has_gdim_resources() {
   local agent_file="$1"
   jq -er '
     .resources // []
-    | any(.[]; . == "skill://.kiro/skills/**/SKILL.md" or test("skill://\\.kiro/skills/gdim"))
+    | any(.[]; . == "skill://~/.kiro/skills/**/SKILL.md" or test("skill://~/.kiro/skills/gdim"))
   ' "$agent_file" >/dev/null 2>&1
 }
 
@@ -256,9 +255,9 @@ write_agent_file() {
   "allowedTools": [],
   "model": "${model_name}",
   "resources": [
-    "skill://.kiro/skills/gdim/SKILL.md",
-    "skill://.kiro/skills/gdim-*/SKILL.md",
-    "skill://.kiro/skills/**/SKILL.md"
+    "skill://~/.kiro/skills/gdim/SKILL.md",
+    "skill://~/.kiro/skills/gdim-*/SKILL.md",
+    "skill://~/.kiro/skills/**/SKILL.md"
   ],
   "hooks": {},
   "toolsSettings": {},

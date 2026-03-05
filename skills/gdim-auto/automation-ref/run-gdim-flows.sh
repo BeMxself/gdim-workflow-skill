@@ -6,7 +6,8 @@ set -euo pipefail
 #
 # Usage: ./automation/ai-coding/run-gdim-flows.sh --task-dir DIR [--from N] [--only N] [--dry-run]
 #          [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME]
-#          [--skip-tests]
+#          [--stall-limit N] [--skip-tests]
+#          [--auto-commit-gdim-docs|--no-auto-commit-gdim-docs]
 # Exit codes: 0=all done, 1=blocked, 2=max rounds, 3=stalled
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -24,6 +25,8 @@ TASK_DIR=""
 RUNNER_OVERRIDE=""
 RUNNER_CMD_OVERRIDE=""
 KIRO_AGENT_OVERRIDE=""
+STALL_LIMIT_OVERRIDE=""
+AUTO_COMMIT_GDIM_DOCS_OVERRIDE=""
 SKIP_TESTS_RAW="${GDIM_SKIP_TESTS:-0}"
 SKIP_TESTS=0
 
@@ -44,8 +47,11 @@ while [[ $# -gt 0 ]]; do
         --runner|--executor) RUNNER_OVERRIDE="$2"; shift 2 ;;
         --runner-cmd) RUNNER_CMD_OVERRIDE="$2"; shift 2 ;;
         --kiro-agent) KIRO_AGENT_OVERRIDE="$2"; shift 2 ;;
+        --stall-limit) STALL_LIMIT_OVERRIDE="$2"; shift 2 ;;
+        --auto-commit-gdim-docs) AUTO_COMMIT_GDIM_DOCS_OVERRIDE="1"; shift ;;
+        --no-auto-commit-gdim-docs) AUTO_COMMIT_GDIM_DOCS_OVERRIDE="0"; shift ;;
         -h|--help)
-            echo "Usage: $0 --task-dir DIR [--from N] [--only N] [--dry-run] [--unblock SLUG] [--stage A|B|C] [--skip-clean-check] [--skip-tests] [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME]"
+            echo "Usage: $0 --task-dir DIR [--from N] [--only N] [--dry-run] [--unblock SLUG] [--stage A|B|C] [--skip-clean-check] [--skip-tests] [--stall-limit N] [--auto-commit-gdim-docs|--no-auto-commit-gdim-docs] [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME]"
             echo "  --task-dir DIR       Task directory (required; config/state/logs read from here)"
             echo "  --from N             Start from flow number N"
             echo "  --only N             Run only flow number N"
@@ -54,6 +60,9 @@ while [[ $# -gt 0 ]]; do
             echo "  --stage X            Override stage for all flows (A=semi-auto, B=full-auto, C=convergence)"
             echo "  --skip-clean-check   Skip clean workspace preflight check"
             echo "  --skip-tests         Skip mvn test gate (or set GDIM_SKIP_TESTS=1)"
+            echo "  --stall-limit N      Stall threshold (consecutive rounds without commit, default 5)"
+            echo "  --auto-commit-gdim-docs     Auto-commit per-round GDIM docs (default)"
+            echo "  --no-auto-commit-gdim-docs  Disable per-round GDIM docs auto-commit"
             echo "  --runner NAME        Override runner for all flows (claude/codex/kiro/custom)"
             echo "  --executor NAME      Alias of --runner"
             echo "  --runner-cmd CMD     Override runner command for all flows"
@@ -227,6 +236,14 @@ for (( i=0; i<FLOW_COUNT; i++ )); do
     fi
     if [ -n "$selected_kiro_agent" ]; then
         round_cmd+=(--kiro-agent "$selected_kiro_agent")
+    fi
+    if [ -n "$STALL_LIMIT_OVERRIDE" ]; then
+        round_cmd+=(--stall-limit "$STALL_LIMIT_OVERRIDE")
+    fi
+    if [ "$AUTO_COMMIT_GDIM_DOCS_OVERRIDE" = "1" ]; then
+        round_cmd+=(--auto-commit-gdim-docs)
+    elif [ "$AUTO_COMMIT_GDIM_DOCS_OVERRIDE" = "0" ]; then
+        round_cmd+=(--no-auto-commit-gdim-docs)
     fi
 
     "${round_cmd[@]}" || exit_code=$?

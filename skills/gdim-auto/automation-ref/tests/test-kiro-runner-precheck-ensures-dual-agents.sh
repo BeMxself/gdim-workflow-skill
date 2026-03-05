@@ -9,6 +9,12 @@ tmp_dir="$(mktemp -d)"
 trap 'rm -rf "${tmp_dir}"' EXIT
 
 mkdir -p "${tmp_dir}/bin" "${tmp_dir}/project"
+fake_home="${tmp_dir}/home"
+mkdir -p "${fake_home}/.codex/skills/gdim"
+
+cat >"${fake_home}/.codex/skills/gdim/SKILL.md" <<'MD'
+# gdim
+MD
 
 cat >"${tmp_dir}/bin/kiro-cli" <<'EOF'
 #!/usr/bin/env bash
@@ -17,6 +23,8 @@ EOF
 chmod +x "${tmp_dir}/bin/kiro-cli"
 
 export PATH="${tmp_dir}/bin:${PATH}"
+export HOME="${fake_home}"
+export CODEX_HOME="${fake_home}/.codex"
 
 # shellcheck disable=SC1090
 source "${RUNNER_LIB}"

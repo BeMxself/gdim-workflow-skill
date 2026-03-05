@@ -35,10 +35,10 @@ chmod +x "${copied_script}"
 
 [[ -f "${project_root}/.kiro/agents/gdim-kiro-opus.json" ]] || { echo "missing opus agent in copied-script project root"; exit 1; }
 [[ -f "${project_root}/.kiro/agents/gdim-kiro-sonnet.json" ]] || { echo "missing sonnet agent in copied-script project root"; exit 1; }
-[[ -f "${project_root}/.kiro/skills/gdim/SKILL.md" ]] || { echo "missing synced gdim skill in copied-script project root"; exit 1; }
-[[ -f "${project_root}/.kiro/skills/gdim-plan/SKILL.md" ]] || { echo "missing synced gdim-plan skill in copied-script project root"; exit 1; }
+[[ -f "${fake_home}/.kiro/skills/gdim/SKILL.md" ]] || { echo "missing synced gdim skill in HOME"; exit 1; }
+[[ -f "${fake_home}/.kiro/skills/gdim-plan/SKILL.md" ]] || { echo "missing synced gdim-plan skill in HOME"; exit 1; }
 
 [[ ! -f "${tmp_dir}/.kiro/agents/gdim-kiro-opus.json" ]] || { echo "unexpected opus agent outside project root"; exit 1; }
-[[ ! -f "${tmp_dir}/.kiro/skills/gdim/SKILL.md" ]] || { echo "unexpected gdim skill outside project root"; exit 1; }
+[[ ! -f "${project_root}/.kiro/skills/gdim/SKILL.md" ]] || { echo "unexpected project-local gdim skill copy"; exit 1; }
 
 echo "PASS: copied setup-kiro-agent defaults project root to script directory"

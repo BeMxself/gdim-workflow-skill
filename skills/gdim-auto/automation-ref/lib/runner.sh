@@ -74,7 +74,7 @@ ensure_default_kiro_agents() {
     bash "$setup_script" --project-root "$project_root" --ensure >/dev/null
     case "$preferred_model" in
       *sonnet*)
-        bash "$setup_script" --project-root "$project_root" --agent-name "gdim-kiro-sonnet" --model "claude-sonnet-4.5" --ensure >/dev/null
+        bash "$setup_script" --project-root "$project_root" --agent-name "gdim-kiro-sonnet" --model "claude-sonnet-4.6" --ensure >/dev/null
         ;;
       *opus*|*)
         bash "$setup_script" --project-root "$project_root" --agent-name "gdim-kiro-opus" --model "claude-opus-4.6" --ensure >/dev/null

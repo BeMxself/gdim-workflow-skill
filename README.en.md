@@ -83,13 +83,13 @@ Tip:
 
 ### Kiro CLI (Skills)
 
-Kiro CLI can load skills from `.kiro/skills/**/SKILL.md` (workspace) and use them via an agent profile.
+Kiro CLI should load skills from `~/.kiro/skills/**/SKILL.md` (user-level) and use them via an agent profile.
 
-1) Install skills into the current repo/workspace:
+1) Install skills into the user-level directory (recommended and aligned with automation scripts):
 
 ```bash
-mkdir -p .kiro/skills
-rsync -a skills/ .kiro/skills/
+mkdir -p ~/.kiro/skills
+rsync -a skills/ ~/.kiro/skills/
 ```
 
 2) Create an agent that includes the skill resources (this opens an editor):
@@ -102,7 +102,7 @@ kiro-cli agent create --name "GDIM Agent" --directory .kiro/agents
 3) In `.kiro/agents/gdim_agent.json`, add this resource entry:
 
 ```json
-{ "resources": ["skill://.kiro/skills/**/SKILL.md"] }
+{ "resources": ["skill://~/.kiro/skills/**/SKILL.md"] }
 ```
 
 4) Start a chat with that agent:
@@ -209,6 +209,8 @@ Run examples:
 - `.ai-workflows/YYYYMMDD-<task-slug>/run.sh`
 - `./run.sh --only N` / `./run.sh --from N` / `./run.sh --dry-run` / `./run.sh --stage A|B|C`
 - `./run.sh --skip-tests` (skip the `mvn test` gate; useful when you plan to run tests later in one batch)
+- `./run.sh --stall-limit N` (mark STALLED after N consecutive no-commit rounds; default 5)
+- `./run.sh --no-auto-commit-gdim-docs` (disable per-round GDIM docs auto-commit; default is enabled)
 - `./run.sh --runner codex` / `./run.sh --runner kiro --kiro-agent gdim-kiro-opus`
 
 Dependencies:
@@ -340,4 +342,4 @@ These skills are designed to be iteratively improved:
 
 ## Version
 
-**v1.5.8** - Stage-by-stage sessions and hard input prechecks, plus copied `setup-kiro-agent.sh` default project root fix
+**v1.5.10** - `FINAL_REPORT` now runs `gdim-final` before flow close; final inputs reduced to Intent + per-round gap-analysis

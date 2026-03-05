@@ -17,6 +17,22 @@ _gdim_truthy() {
     esac
 }
 
+_gdim_trim_spaces() {
+    local value="$1"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    printf "%s" "$value"
+}
+
+_gdim_strip_surrounding_quotes() {
+    local value="$1"
+    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+        value="${value#\"}"
+        value="${value%\"}"
+    fi
+    printf "%s" "$value"
+}
+
 _gap_exit_decision_line() {
     local gap_file="$1"
     awk '
@@ -221,10 +237,13 @@ run_quality_gates() {
             local violations=""
             while IFS= read -r file; do
                 [ -z "$file" ] && continue
+                file=$(_gdim_trim_spaces "$file")
+                file=$(_gdim_strip_surrounding_quotes "$file")
                 local allowed=0
                 IFS=',' read -ra paths <<< "$allowed_paths"
                 for prefix in "${paths[@]}"; do
-                    prefix=$(echo "$prefix" | xargs)  # trim whitespace
+                    prefix=$(_gdim_trim_spaces "$prefix")
+                    prefix=$(_gdim_strip_surrounding_quotes "$prefix")
                     if [[ "$file" == ${prefix}* ]]; then
                         allowed=1
                         break

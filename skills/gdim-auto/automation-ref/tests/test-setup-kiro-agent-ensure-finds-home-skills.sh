@@ -28,7 +28,7 @@ HOME="${fake_home}" \
 
 [[ -f "${project_root}/.kiro/agents/gdim-kiro-opus.json" ]] || { echo "missing opus agent"; exit 1; }
 [[ -f "${project_root}/.kiro/agents/gdim-kiro-sonnet.json" ]] || { echo "missing sonnet agent"; exit 1; }
-[[ -f "${project_root}/.kiro/skills/gdim/SKILL.md" ]] || { echo "missing synced gdim skill from HOME"; exit 1; }
-[[ -f "${project_root}/.kiro/skills/gdim-plan/SKILL.md" ]] || { echo "missing synced gdim-plan skill from HOME"; exit 1; }
+[[ -f "${fake_home}/.kiro/skills/gdim/SKILL.md" ]] || { echo "missing synced gdim skill from HOME"; exit 1; }
+[[ -f "${fake_home}/.kiro/skills/gdim-plan/SKILL.md" ]] || { echo "missing synced gdim-plan skill from HOME"; exit 1; }
 
 echo "PASS: setup-kiro-agent --ensure finds and syncs HOME skills source"

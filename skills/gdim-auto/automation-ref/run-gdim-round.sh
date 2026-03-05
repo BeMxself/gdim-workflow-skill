@@ -9,7 +9,9 @@ set -euo pipefail
 #          --workflow-dir DIR --intent-file FILE \
 #          --design-doc DOC --modules MODS \
 #          [--allowed-paths PATHS] [--stage A|B|C] [--runner NAME|--executor NAME] \
-#          [--runner-cmd CMD] [--kiro-agent NAME] [--skip-tests] [--dry-run] [--timeout MIN]
+#          [--runner-cmd CMD] [--kiro-agent NAME] [--stall-limit N] \
+#          [--skip-tests] [--auto-commit-gdim-docs|--no-auto-commit-gdim-docs] \
+#          [--dry-run] [--timeout MIN]
 #
 # Exit codes: 0=all gaps closed, 1=BLOCKED, 2=max rounds, 3=stalled
 
@@ -37,9 +39,17 @@ HEARTBEAT_SECONDS_RAW="${GDIM_HEARTBEAT_SECONDS:-20}"
 HEARTBEAT_SECONDS=20
 SKIP_TESTS_RAW="${GDIM_SKIP_TESTS:-0}"
 SKIP_TESTS=0
+STALL_LIMIT_RAW="${GDIM_STALL_LIMIT:-5}"
+AUTO_COMMIT_GDIM_DOCS_RAW="${GDIM_AUTO_COMMIT_GDIM_DOCS:-1}"
+AUTO_COMMIT_GDIM_DOCS=1
 
 case "${SKIP_TESTS_RAW}" in
     1|true|TRUE|yes|YES|on|ON) SKIP_TESTS=1 ;;
+esac
+
+case "${AUTO_COMMIT_GDIM_DOCS_RAW}" in
+    0|false|FALSE|no|NO|off|OFF) AUTO_COMMIT_GDIM_DOCS=0 ;;
+    1|true|TRUE|yes|YES|on|ON) AUTO_COMMIT_GDIM_DOCS=1 ;;
 esac
 
 while [[ $# -gt 0 ]]; do
@@ -60,12 +70,15 @@ while [[ $# -gt 0 ]]; do
         --runner|--executor) RUNNER_OVERRIDE="$2"; shift 2 ;;
         --runner-cmd)     RUNNER_CMD_OVERRIDE="$2"; shift 2 ;;
         --kiro-agent)     KIRO_AGENT_OVERRIDE="$2"; shift 2 ;;
+        --stall-limit)    STALL_LIMIT_RAW="$2"; shift 2 ;;
+        --auto-commit-gdim-docs) AUTO_COMMIT_GDIM_DOCS=1; shift ;;
+        --no-auto-commit-gdim-docs) AUTO_COMMIT_GDIM_DOCS=0; shift ;;
         *) echo "Unknown option: $1" >&2; exit 1 ;;
     esac
 done
 
 if [ -z "$FLOW_SLUG" ] || [ -z "$WORKFLOW_DIR" ]; then
-    echo "Usage: $0 --flow-slug SLUG --workflow-dir DIR [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME] [--skip-tests] [options]" >&2
+    echo "Usage: $0 --flow-slug SLUG --workflow-dir DIR [--runner NAME|--executor NAME] [--runner-cmd CMD] [--kiro-agent NAME] [--stall-limit N] [--skip-tests] [--auto-commit-gdim-docs|--no-auto-commit-gdim-docs] [options]" >&2
     exit 1
 fi
 
@@ -96,10 +109,16 @@ else
     log_info "Invalid GDIM_HEARTBEAT_SECONDS=${HEARTBEAT_SECONDS_RAW}, fallback to 20s"
 fi
 
-# Stall threshold: Stage C is tighter (1 round), others 2
-STALL_LIMIT=2
-if [ "$STAGE" = "C" ]; then
-    STALL_LIMIT=1
+# Stall threshold: default 5 rounds, override by --stall-limit or GDIM_STALL_LIMIT.
+if [[ "$STALL_LIMIT_RAW" =~ ^[0-9]+$ ]] && [ "$STALL_LIMIT_RAW" -ge 1 ]; then
+    STALL_LIMIT="$STALL_LIMIT_RAW"
+else
+    STALL_LIMIT=5
+    log_info "Invalid stall limit=${STALL_LIMIT_RAW}, fallback to 5"
+fi
+
+if [ "$DRY_RUN" -eq 1 ] && [ "$AUTO_COMMIT_GDIM_DOCS" -eq 1 ]; then
+    AUTO_COMMIT_GDIM_DOCS=0
 fi
 
 # Load retry limits from config
@@ -170,6 +189,21 @@ TEMPLATE_DIR="${SCRIPT_DIR}/templates/stages"
 
 mkdir -p "$WORKFLOW_DIR_ABS"
 init_round_state "$FLOW_SLUG"
+
+# Auto-commit docs is safest on clean workspace; disable automatically when
+# skip-clean-check is used on a dirty workspace.
+if [ "$AUTO_COMMIT_GDIM_DOCS" -eq 1 ]; then
+    if ! git -C "$PROJECT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        log_warn "Auto-commit GDIM docs disabled: not inside a git repository"
+        AUTO_COMMIT_GDIM_DOCS=0
+    else
+        _dirty_for_autocommit=$(git -C "$PROJECT_ROOT" status --porcelain 2>/dev/null || true)
+        if [ -n "$_dirty_for_autocommit" ]; then
+            log_warn "Auto-commit GDIM docs disabled: workspace has pre-existing changes"
+            AUTO_COMMIT_GDIM_DOCS=0
+        fi
+    fi
+fi
 
 # --- Preflight: clean workspace check ---
 if [ "$DRY_RUN" -eq 0 ] && [ "$SKIP_CLEAN_CHECK" -eq 0 ]; then
@@ -257,6 +291,15 @@ _trim_spaces() {
     printf "%s" "$value"
 }
 
+_strip_surrounding_quotes() {
+    local value="$1"
+    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+        value="${value#\"}"
+        value="${value%\"}"
+    fi
+    printf "%s" "$value"
+}
+
 _csv_contains_item() {
     local csv="$1"
     local item="$2"
@@ -298,6 +341,7 @@ expand_allowed_paths_for_path_violation() {
 
     while IFS= read -r file; do
         file=$(_trim_spaces "$file")
+        file=$(_strip_surrounding_quotes "$file")
         [ -z "$file" ] && continue
         path_prefix="$file"
         if [[ "$file" == */* ]]; then
@@ -345,6 +389,154 @@ has_any_execute_phase_passed() {
         fi
     done
     return 1
+}
+
+_to_project_relative_path() {
+    local abs_path="$1"
+    if [[ "$abs_path" == "$PROJECT_ROOT/"* ]]; then
+        printf "%s" "${abs_path#"$PROJECT_ROOT"/}"
+        return 0
+    fi
+    return 1
+}
+
+auto_commit_round_gdim_docs() {
+    local round="$1"
+    local doc_files=()
+    local abs_file=""
+    local rel_file=""
+    local commit_msg=""
+
+    [ "$AUTO_COMMIT_GDIM_DOCS" -eq 1 ] || return 0
+    [ "$DRY_RUN" -eq 0 ] || return 0
+
+    abs_file="$(resolve_phase_file_for_round "scope" "$round")"
+    [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
+    abs_file="$(resolve_phase_file_for_round "design" "$round")"
+    [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
+    abs_file="$(resolve_phase_file_for_round "plan" "$round")"
+    [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
+    abs_file="$(resolve_phase_file_for_round "execute-log" "$round")"
+    [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
+    abs_file="$(resolve_phase_file_for_round "summary" "$round")"
+    [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
+    abs_file="$(resolve_phase_file_for_round "gap-analysis" "$round")"
+    [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
+
+    [ "${#doc_files[@]}" -gt 0 ] || return 0
+
+    if ! git -C "$PROJECT_ROOT" add -- "${doc_files[@]}" 2>/dev/null; then
+        log_warn "Auto-commit GDIM docs: git add failed, skip this round"
+        return 0
+    fi
+
+    if git -C "$PROJECT_ROOT" diff --cached --quiet -- "${doc_files[@]}" 2>/dev/null; then
+        return 0
+    fi
+
+    commit_msg="gdim(${FLOW_SLUG}): R${round} docs checkpoint"
+    if git -C "$PROJECT_ROOT" commit -m "$commit_msg" -- "${doc_files[@]}" >/dev/null 2>&1; then
+        log_info "Auto-committed GDIM docs: ${commit_msg}"
+        append_round_event "$FLOW_SLUG" "$round" "gdim_docs_committed" "message=${commit_msg}"
+        append_progress "$FLOW_SLUG" "R${round}: auto-committed GDIM docs"
+    else
+        log_warn "Auto-commit GDIM docs failed (check git user/email or hooks)"
+        append_round_event "$FLOW_SLUG" "$round" "gdim_docs_commit_failed" "message=${commit_msg}"
+    fi
+}
+
+collect_flow_final_input_files() {
+    local round="$1"
+    local workflow_base_abs
+    local shared_intent_abs
+    local r=0
+    local gap_file=""
+
+    workflow_base_abs="$(dirname "$WORKFLOW_DIR_ABS")"
+    shared_intent_abs="${workflow_base_abs}/00-intent.md"
+
+    if [ -f "$shared_intent_abs" ]; then
+        echo "$shared_intent_abs"
+    fi
+    if [ -f "$INTENT_FILE_ABS" ] && [ "$INTENT_FILE_ABS" != "$shared_intent_abs" ]; then
+        echo "$INTENT_FILE_ABS"
+    fi
+
+    for ((r=1; r<=round; r++)); do
+        gap_file="$(resolve_phase_file_for_round "gap-analysis" "$r")"
+        [ -f "$gap_file" ] && echo "$gap_file"
+    done
+}
+
+build_flow_final_prompt() {
+    local round="$1"
+    local final_report_file="${WORKFLOW_DIR_ABS}/99-final-report.md"
+    local files_list=""
+    local input_file=""
+
+    while IFS= read -r input_file; do
+        [ -z "$input_file" ] && continue
+        files_list="${files_list}- ${input_file}"$'\n'
+    done < <(collect_flow_final_input_files "$round")
+
+    if [ -z "$files_list" ]; then
+        files_list="- ${WORKFLOW_DIR_ABS}/ (flow 过程目录，至少包含 gap-analysis)\n"
+    fi
+
+    cat <<EOF
+你正在执行 GDIM 自动化工作流的收敛步骤（Final Report）。
+
+## Final 阶段专用规则
+- 本会话只允许执行：\`/gdim-final\`
+- 输入文件只允许使用：Intent + 每轮 Gap Analysis
+- 必须先逐个读取下方“过程输入文件”，再生成最终报告
+- 若有必要，可自行读取其他过程文件补充事实
+- 最终报告必须写入：\`${final_report_file}\`
+
+## 过程输入文件（必须读取）
+${files_list}
+## 当前上下文
+- 流程: ${FLOW_SLUG}
+- 收敛轮次: R${round}
+- 设计文档: ${DESIGN_DOC}
+- 工作流目录: ${WORKFLOW_DIR_ABS}
+- 涉及模块: ${MODULES}
+
+## 输出要求
+- 调用 \`/gdim-final\` 生成本 flow 的最终报告
+- 输出文件：\`${final_report_file}\`
+- 不要再开启新一轮 scope/design/plan/execute/summary/gap
+EOF
+}
+
+run_flow_final_stage() {
+    local round="$1"
+    local final_prompt=""
+    local final_log=""
+    local final_exit=0
+
+    final_prompt="$(build_flow_final_prompt "$round")"
+    if [ -n "${TASK_DIR:-}" ]; then
+        final_log="${TASK_DIR}/logs/${FLOW_SLUG}-R${round}-final.log"
+    else
+        final_log="${SCRIPT_DIR}/../automation-logs/${FLOW_SLUG}-R${round}-final.log"
+    fi
+
+    append_round_event "$FLOW_SLUG" "$round" "final_stage_started" "flow=${FLOW_SLUG}"
+    append_progress "$FLOW_SLUG" "R${round}: running gdim-final stage"
+    export CURRENT_STAGE="final"
+    invoke_runner "$final_prompt" "$final_log" || final_exit=$?
+    export CURRENT_STAGE=""
+
+    if [ "$final_exit" -ne 0 ]; then
+        append_round_event "$FLOW_SLUG" "$round" "final_stage_failed" "exit=${final_exit}"
+        append_progress "$FLOW_SLUG" "R${round}: gdim-final failed (exit=${final_exit})"
+        return $final_exit
+    fi
+
+    append_round_event "$FLOW_SLUG" "$round" "final_stage_completed" "flow=${FLOW_SLUG}"
+    append_progress "$FLOW_SLUG" "R${round}: gdim-final completed"
+    return 0
 }
 
 readonly GDIM_STAGE_ORDER="scope design plan execute summary gap"
@@ -710,6 +902,9 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         fi
     fi
 
+    # 3.5 Auto-commit GDIM round docs (default on)
+    auto_commit_round_gdim_docs "$round"
+
     # 4. Quality gates (external validation)
     log_info "Running quality gates..."
     if [ "$SKIP_TESTS" -eq 1 ]; then
@@ -735,10 +930,10 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
     # Audit: changed files and diff stat (from round baseline)
     if [ -n "$BASELINE_COMMIT" ]; then
         diff_stat=$(git -C "$PROJECT_ROOT" diff --stat "$BASELINE_COMMIT" HEAD 2>/dev/null | tail -1 || echo "none")
-        changed_files=$(git -C "$PROJECT_ROOT" diff --name-only "$BASELINE_COMMIT" HEAD 2>/dev/null | wc -l | xargs || echo "0")
+        changed_files=$(git -C "$PROJECT_ROOT" diff --name-only "$BASELINE_COMMIT" HEAD 2>/dev/null | wc -l | awk '{print $1}' || echo "0")
     else
         diff_stat=$(git -C "$PROJECT_ROOT" diff --stat HEAD~1 HEAD 2>/dev/null | tail -1 || echo "none")
-        changed_files=$(git -C "$PROJECT_ROOT" diff --name-only HEAD~1 HEAD 2>/dev/null | wc -l | xargs || echo "0")
+        changed_files=$(git -C "$PROJECT_ROOT" diff --name-only HEAD~1 HEAD 2>/dev/null | wc -l | awk '{print $1}' || echo "0")
     fi
     set_round_field "$FLOW_SLUG" "changed_files" "$changed_files"
     set_round_field "$FLOW_SLUG" "diff_stat" "\"${diff_stat}\""
@@ -865,17 +1060,29 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
             current_commit_count=$(git -C "$PROJECT_ROOT" rev-list --count HEAD 2>/dev/null || echo "0")
             if [ "$current_commit_count" -le "$LAST_COMMIT_COUNT" ]; then
                 if gap_decision_is_final "$gap_file"; then
-                    if [ -z "$MODULES" ] || has_any_execute_phase_passed "$FLOW_SLUG" "$round"; then
-                        log_warn "No new commit in R${round}, but accepting explicit final decision"
-                        log_info "All gaps closed for ${FLOW_SLUG}"
-                        append_round_event "$FLOW_SLUG" "$round" "round_completed" "reason=final_decision_without_new_commit"
-                        append_progress "$FLOW_SLUG" "R${round}: ALL GAPS CLOSED (final decision, no new commit)"
-                        exit 0
+                    if ! run_flow_final_stage "$round"; then
+                        log_error "Final stage failed for ${FLOW_SLUG}, marking BLOCKED"
+                        append_round_event "$FLOW_SLUG" "$round" "round_blocked" "reason=final_stage_failed"
+                        append_progress "$FLOW_SLUG" "R${round}: BLOCKED (final stage failed)"
+                        exit 1
                     fi
+                    log_warn "No new commit in R${round}, but accepting explicit final decision"
+                    log_info "All gaps closed for ${FLOW_SLUG}"
+                    append_round_event "$FLOW_SLUG" "$round" "round_completed" "reason=final_decision_without_new_commit"
+                    append_progress "$FLOW_SLUG" "R${round}: ALL GAPS CLOSED (final decision, no new commit)"
+                    exit 0
                 fi
                 log_warn "Gap claims closed but no new commit since baseline — treating as stall"
                 append_progress "$FLOW_SLUG" "R${round}: gap-closed without commit, suspicious"
             else
+                if gap_decision_is_final "$gap_file"; then
+                    if ! run_flow_final_stage "$round"; then
+                        log_error "Final stage failed for ${FLOW_SLUG}, marking BLOCKED"
+                        append_round_event "$FLOW_SLUG" "$round" "round_blocked" "reason=final_stage_failed"
+                        append_progress "$FLOW_SLUG" "R${round}: BLOCKED (final stage failed)"
+                        exit 1
+                    fi
+                fi
                 log_info "All gaps closed for ${FLOW_SLUG}"
                 append_round_event "$FLOW_SLUG" "$round" "round_completed" "reason=all_gaps_closed"
                 append_progress "$FLOW_SLUG" "R${round}: ALL GAPS CLOSED"

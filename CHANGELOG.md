@@ -1,5 +1,40 @@
 # 更新日志
 
+## v1.5.10 - 2026-03-05
+
+### /gdim-auto FINAL_REPORT 收敛阶段强化
+
+- 当 `gap-analysis` 明确给出 `GDIM_EXIT_DECISION: FINAL_REPORT` 时，`run-gdim-round.sh` 会在结束当前 flow 前强制执行一次 `gdim-final`。
+- `gdim-final` 输入文件清单收敛为：`Intent + 各轮 gap-analysis`。
+- Final 阶段提示词新增约束：必要时可读取其他过程文件补充事实，但无需在最终报告中枚举这些文件名。
+- 新增回归测试：`test-gap-final-decision-triggers-gdim-final-stage.sh`，覆盖 FINAL_REPORT 触发 final 阶段与输入注入约束。
+
+## v1.5.9 - 2026-03-05
+
+### /gdim-auto Kiro skills 同步与 resources 路径调整
+
+- `setup-kiro-agent.sh --ensure` 的 skills 同步目标从项目内 `.kiro/skills/` 调整为用户级 `~/.kiro/skills/`。
+- 自动生成/修复的 Kiro agent 资源路径改为：
+  - `skill://~/.kiro/skills/gdim/SKILL.md`
+  - `skill://~/.kiro/skills/gdim-*/SKILL.md`
+  - `skill://~/.kiro/skills/**/SKILL.md`
+- 对应校验逻辑、README/REFERENCE 与 `gdim-auto` skill 文档同步更新，明确要求保证相关 skills 在 `~/.kiro/skills` 下。
+- 修复 path whitelist 比对中的 `xargs` 引号解析问题，避免中文/带引号路径触发 `xargs: unterminated quote` 噪音。
+- `STALLED` 默认阈值由 2 提升为 5，支持通过 `--stall-limit N`（或 `GDIM_STALL_LIMIT`）覆盖。
+- 调整收敛逻辑：`GDIM_EXIT_DECISION: FINAL_REPORT` 与“无新 commit”不再互斥，显式 FINAL_REPORT 将直接收敛。
+- 默认开启每轮 GDIM 文档自动提交（scope/design/plan/summary/gap 等）；支持 `--no-auto-commit-gdim-docs` 或 `GDIM_AUTO_COMMIT_GDIM_DOCS=0` 关闭。
+
+### 测试补充与调整
+
+- 更新并通过：
+  - `test-setup-kiro-agent-defaults.sh`
+  - `test-setup-kiro-agent-ensure-syncs-skills.sh`
+  - `test-setup-kiro-agent-ensure-finds-home-skills.sh`
+  - `test-setup-kiro-agent-copied-script-default-root.sh`
+  - `test-stall-limit-default-and-flag.sh`
+  - `test-gap-final-decision-closes-no-commit-with-modules.sh`
+  - `test-auto-commit-gdim-docs-default.sh`
+
 ## v1.5.8 - 2026-03-05
 
 ### /gdim-auto setup-kiro-agent 默认项目根目录修复

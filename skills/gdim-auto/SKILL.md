@@ -238,6 +238,8 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
 #   Dry-run preview:     ./run.sh --dry-run
 #   Semi-auto mode:      ./run.sh --stage A
 #   Skip mvn test gate:  ./run.sh --skip-tests
+#   Stall threshold:      ./run.sh --stall-limit 5
+#   Disable doc commits:  ./run.sh --no-auto-commit-gdim-docs
 #   Use codex runner:    ./run.sh --runner codex
 #   Use kiro runner:     ./run.sh --runner kiro --kiro-agent gdim-kiro-sonnet
 #   Custom executor cmd: ./run.sh --runner custom --runner-cmd 'my-runner --stdio'
@@ -280,6 +282,8 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
   ./run.sh --unblock <slug>   # 解除阻塞
   ./run.sh --stage A          # 半自动模式（每轮人工确认）
   ./run.sh --skip-tests       # 跳过 mvn test 门禁（也可用 GDIM_SKIP_TESTS=1）
+  ./run.sh --stall-limit 5    # 连续 5 轮无 commit 判定 STALLED（可调整）
+  ./run.sh --no-auto-commit-gdim-docs  # 关闭每轮 GDIM 文档自动提交（默认开启）
   ./run.sh --runner codex     # 使用 codex 执行器
   ./run.sh --runner kiro --kiro-agent gdim-kiro-opus   # 使用 kiro + 指定 agent
   ./run.sh --runner custom --runner-cmd '<your command>' # 自定义执行器命令
@@ -292,8 +296,9 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
 - `flows.json` 中的 `allowed_paths` 必须包含流程的工作流目录和涉及的模块目录
 - 执行器配置建议使用 `execution.runner` 与 `flows[].runner`；旧字段 `executor` 与 `flows[].executor` 仍可兼容读取
 - Intent 文件应该足够详细，让自动化 agent 能独立完成每个流程
-- 当 runner=kiro 时，运行前会自动检查并确保存在 `gdim-kiro-opus` 与 `gdim-kiro-sonnet` 两个 agent（包含 gdim skills 资源）
+- 当 runner=kiro 时，运行前会自动检查并确保存在 `gdim-kiro-opus` 与 `gdim-kiro-sonnet` 两个 agent（资源指向 `skill://~/.kiro/skills/...`），并同步 gdim skills 到 `~/.kiro/skills`
 - `run-gdim-round.sh` 在同一轮内会按 `scope → design → plan → execute → summary → gap` 分阶段触发独立会话（每阶段一次 runner 调用）
+- 默认会在每轮阶段完成后自动提交该轮 GDIM 文档（scope/design/plan/summary/gap 等）；可通过 `--no-auto-commit-gdim-docs` 或 `GDIM_AUTO_COMMIT_GDIM_DOCS=0` 关闭
 - 每阶段执行前会进行必需输入文件硬校验（缺失即 BLOCKED），防止在缺依赖状态下继续推进流程
 - 执行 runner 时会周期输出 `Runner still running... elapsed=<N>s`，默认间隔为 20 秒；可通过 `GDIM_HEARTBEAT_SECONDS` 覆盖（`0` 为关闭）
 - 发生 `path_violation` 时会默认自动扩展 `allowed_paths`（按越界文件目录前缀）并继续执行，不再因该类失败直接 BLOCK
