@@ -2,7 +2,29 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+detect_default_project_root() {
+  local git_root=""
+
+  git_root="$(git -C "${SCRIPT_DIR}" rev-parse --show-toplevel 2>/dev/null || true)"
+  if [[ -n "${git_root}" ]]; then
+    printf "%s\n" "${git_root}"
+    return 0
+  fi
+
+  # Keep backward-compatible behavior for packaged layout:
+  # <project>/automation/ai-coding/setup-kiro-agent.sh
+  if [[ "${SCRIPT_DIR}" == */automation/ai-coding ]]; then
+    (cd "${SCRIPT_DIR}/../.." && pwd)
+    return 0
+  fi
+
+  # If the script is copied elsewhere (for example project root), treat
+  # the script directory itself as project root.
+  printf "%s\n" "${SCRIPT_DIR}"
+}
+
+PROJECT_ROOT="$(detect_default_project_root)"
 
 DEFAULT_OPUS_AGENT="gdim-kiro-opus"
 DEFAULT_OPUS_MODEL="claude-opus-4.6"
@@ -24,13 +46,136 @@ Behavior:
   - With --agent-name: manage one specific agent.
 
 Options:
-  --project-root <dir>  Target project root (default: automation script repo root)
+  --project-root <dir>  Target project root (default: auto-detected from git/script location)
   --agent-name <name>   Single-agent mode: target agent name
   --model <model-id>    Single-agent mode: model id (default: claude-opus-4.6)
-  --ensure              Create or repair when missing/invalid (idempotent)
+  --ensure              Create/repair agents and sync GDIM skills to .kiro/skills (idempotent)
   --force               Always overwrite target file(s)
   -h, --help            Show help
+
+Environment:
+  GDIM_SKILLS_SOURCE_DIR  Optional source directory that contains gdim skills (e.g. <dir>/gdim/SKILL.md)
 USAGE
+}
+
+readonly GDIM_REQUIRED_SKILLS=(
+  "gdim"
+  "gdim-auto"
+  "gdim-init"
+  "gdim-intent"
+  "gdim-scope"
+  "gdim-design"
+  "gdim-plan"
+  "gdim-execute"
+  "gdim-summary"
+  "gdim-gap"
+  "gdim-final"
+)
+
+find_gdim_skill_source() {
+  local candidate=""
+  local probe="$SCRIPT_DIR"
+
+  if [[ -n "${GDIM_SKILLS_SOURCE_DIR:-}" ]]; then
+    if [[ -f "${GDIM_SKILLS_SOURCE_DIR}/gdim/SKILL.md" ]]; then
+      echo "${GDIM_SKILLS_SOURCE_DIR}"
+      return 0
+    fi
+    echo "WARN: GDIM_SKILLS_SOURCE_DIR does not contain gdim/SKILL.md: ${GDIM_SKILLS_SOURCE_DIR}" >&2
+  fi
+
+  local candidates=(
+    "${PROJECT_ROOT}/skills"
+    "${PROJECT_ROOT}/.kiro/skills"
+    "${PROJECT_ROOT}/.agents/skills"
+    "${PROJECT_ROOT}/.codex/skills"
+    "${CODEX_HOME:-${HOME}/.codex}/skills"
+    "${HOME}/.codex/skills"
+    "${HOME}/.agents/skills"
+    "${HOME}/.kiro/skills"
+    "${HOME}/.claude/skills"
+  )
+  for candidate in "${candidates[@]}"; do
+    if [[ -f "${candidate}/gdim/SKILL.md" ]]; then
+      echo "${candidate}"
+      return 0
+    fi
+  done
+
+  local search_root=""
+  local found=""
+  local search_roots=(
+    "${PROJECT_ROOT}"
+    "${HOME}/.claude/plugins"
+    "${HOME}/.claude"
+    "${HOME}/.agents"
+    "${HOME}/.kiro"
+    "${HOME}/.codex"
+    "${CODEX_HOME:-${HOME}/.codex}"
+  )
+  for search_root in "${search_roots[@]}"; do
+    [[ -d "${search_root}" ]] || continue
+    found="$(find "${search_root}" -type f \( -path "*/skills/gdim/SKILL.md" -o -path "*/gdim/SKILL.md" \) 2>/dev/null | head -1)"
+    if [[ -n "${found}" ]]; then
+      candidate="$(cd "$(dirname "$(dirname "${found}")")" && pwd)"
+      if [[ -f "${candidate}/gdim/SKILL.md" ]]; then
+        echo "${candidate}"
+        return 0
+      fi
+    fi
+  done
+
+  for _ in 1 2 3 4 5 6; do
+    if [[ -f "${probe}/skills/gdim/SKILL.md" ]]; then
+      echo "${probe}/skills"
+      return 0
+    fi
+    candidate="$(dirname "${probe}")"
+    if [[ "${candidate}" == "${probe}" ]]; then
+      break
+    fi
+    probe="${candidate}"
+  done
+
+  return 1
+}
+
+copy_skill_dir() {
+  local src="$1"
+  local dst="$2"
+  mkdir -p "${dst}"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a "${src}/" "${dst}/"
+  else
+    cp -R "${src}/." "${dst}/"
+  fi
+}
+
+sync_gdim_skills() {
+  local source_root=""
+  local target_root="${PROJECT_ROOT}/.kiro/skills"
+  local skill=""
+  local copied=0
+
+  source_root="$(find_gdim_skill_source || true)"
+  if [[ -z "${source_root}" ]]; then
+    echo "WARN: GDIM skill source not found; skip syncing .kiro/skills" >&2
+    return 0
+  fi
+
+  for skill in "${GDIM_REQUIRED_SKILLS[@]}"; do
+    if [[ -d "${source_root}/${skill}" ]]; then
+      copy_skill_dir "${source_root}/${skill}" "${target_root}/${skill}"
+      copied=$((copied + 1))
+    fi
+  done
+
+  if [[ "${copied}" -eq 0 ]]; then
+    echo "WARN: no GDIM skills found in source: ${source_root}" >&2
+    return 0
+  fi
+
+  echo "Kiro skills synced: ${copied} skill(s) -> ${target_root}"
 }
 
 agent_has_required_tools() {
@@ -181,6 +326,10 @@ done
 
 if [[ "$PROJECT_ROOT" != /* ]]; then
   PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
+fi
+
+if [[ "$ENSURE" -eq 1 ]]; then
+  sync_gdim_skills
 fi
 
 if [[ -n "$TARGET_AGENT_NAME" ]]; then

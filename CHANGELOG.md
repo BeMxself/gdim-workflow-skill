@@ -1,5 +1,107 @@
 # 更新日志
 
+## v1.5.8 - 2026-03-05
+
+### /gdim-auto setup-kiro-agent 默认项目根目录修复
+
+- 修复 `setup-kiro-agent.sh` 在“脚本被拷贝到项目目录后直接执行”场景下的默认 `PROJECT_ROOT` 误判：
+  - 默认优先使用 Git 根目录
+  - 兼容 `automation/ai-coding` 打包布局
+  - 非打包布局回退到脚本所在目录
+- 避免 `--ensure` 将 `.kiro/agents` 与 `.kiro/skills` 写入错误路径（如临时目录上级）。
+
+### 测试补充
+
+- 新增并通过：
+  - `test-setup-kiro-agent-copied-script-default-root.sh`
+
+## v1.5.7 - 2026-03-04
+
+### /gdim-auto 阶段输入文件硬校验
+
+- `run-gdim-round.sh` 新增阶段输入 precheck：
+  - 每阶段执行前校验必需输入文件是否存在（如 design 依赖 scope+intent+design source，execute 依赖 plan 等）
+  - 缺失时立即标记 `BLOCKED`，不再继续后续阶段
+- `lib/prompt-builder.sh` 增加阶段文件路径占位符注入（scope/design/plan/summary/gap 等）
+
+### Kiro skills 源发现增强
+
+- `setup-kiro-agent.sh --ensure` 的 skills 源发现新增目录扫描 fallback（含 `~/.claude/plugins` 等），提升脚本拷贝到项目目录后的可用性
+
+### 测试补充
+
+- 新增并通过：
+  - `test-stage-input-precheck-blocks-missing-files.sh`
+  - `test-stage-prompts-inject-required-files.sh`
+  - `test-setup-kiro-agent-ensure-finds-home-skills.sh`
+
+## v1.5.6 - 2026-03-04
+
+### /gdim-auto 阶段提示词按规范细化
+
+- `run-gdim-round.sh` 改为按阶段读取 `templates/stages/<stage>.md.tpl`，不再使用单一 round 模板
+- 新增 6 个阶段模板：`scope/design/plan/execute/summary/gap`
+- 各阶段模板新增“必读输入文件”注入，按 GDIM 规范明确阶段输入依赖：
+  - design: 注入 intent + scope + 设计来源文档
+  - plan: 注入 design
+  - execute: 注入 plan + design + scope
+  - summary: 注入 design + plan + execution log
+  - gap: 注入 intent + design + summary + scope
+
+### 测试补充
+
+- 新增并通过：
+  - `test-round-uses-stage-specific-templates.sh`
+  - `test-stage-prompts-inject-required-files.sh`
+
+## v1.5.5 - 2026-03-04
+
+### /gdim-auto 单阶段提示词收敛
+
+- `templates/round-prompt.md.tpl` 移除整轮六阶段说明，避免阶段会话被误导为一次执行整轮
+- 增加强约束：每次会话仅允许执行 `{{CURRENT_STAGE_CMD}}`，禁止调用其他 `/gdim-*`
+
+## v1.5.4 - 2026-03-04
+
+### /gdim-auto 清理未生效规则注入模板
+
+- 删除未被 prompt 模板引用的 `templates/gdim-rules-injection.md`
+- 移除 `run-gdim-round.sh` 与 `lib/prompt-builder.sh` 中对应的无效注入参数链路
+- 同步更新 `sync-automation.sh` 与 `test-sync-copies-missing-by-default.sh` 文件清单
+
+## v1.5.3 - 2026-03-04
+
+### /gdim-auto Kiro 预检查自动同步 skills
+
+- `setup-kiro-agent.sh --ensure` 新增 GDIM skills 自动同步：
+  - 自动将 gdim 系列 skills 同步到 `.kiro/skills/`
+  - 新增 `GDIM_SKILLS_SOURCE_DIR` 环境变量，可显式指定 skills 源目录
+- 保持原有 agent 生成/修复逻辑不变（`gdim-kiro-opus` / `gdim-kiro-sonnet`）
+
+### 测试补充
+
+- 新增并通过：
+  - `test-setup-kiro-agent-ensure-syncs-skills.sh`
+
+## v1.5.2 - 2026-03-04
+
+### /gdim-auto 每阶段独立会话执行
+
+- `run-gdim-round.sh` 执行模型调整为“同一 round 内按阶段独立会话”：
+  - 按 `scope → design → plan → execute → summary → gap` 顺序逐阶段调用 runner
+  - 每阶段单独生成会话 prompt 与日志文件（`${flow}-R${round}-${stage}.log`）
+- phase checkpoint 刷新粒度提升：
+  - 每阶段完成后立即更新 phase 状态，异常中断后可从下一个未通过阶段恢复
+- runner 事件明细增强：
+  - `runner_invoking/runner_completed/runner_failed` 事件 detail 增加 `stage` 字段
+
+### 文档与测试
+
+- 更新 `skills/gdim-auto/SKILL.md` / `REFERENCE.md` / `templates/round-prompt.md.tpl` / `templates/gdim-rules-injection.md`：
+  - 明确每轮每阶段独立会话执行语义
+- 新增并通过自动化测试：
+  - `test-round-runs-stage-by-stage-sessions.sh`
+
 ## v1.5.1 - 2026-03-03
 
 ### /gdim-auto Gap 退出判定稳定性增强

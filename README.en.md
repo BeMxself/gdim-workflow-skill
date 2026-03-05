@@ -340,4 +340,4 @@ These skills are designed to be iteratively improved:
 
 ## Version
 
-**v1.5.1** - Stable Gap exit decision parsing with explicit `GDIM_EXIT_DECISION` marker priority
+**v1.5.8** - Stage-by-stage sessions and hard input prechecks, plus copied `setup-kiro-agent.sh` default project root fix

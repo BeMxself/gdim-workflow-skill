@@ -83,6 +83,11 @@ cat >"${task_dir}/intents/01-gap-final-prior-flow.md" <<'MD'
 # intent
 MD
 
+# Scope stage of R2 now requires previous round gap file to exist.
+cat >"${workflow_abs}/03-gap-analysis.round1.md" <<'MD'
+# Gap Analysis - Round 1
+MD
+
 # Seed prior round execute progress to emulate earlier meaningful code round.
 cat >"${task_dir}/state/gap-final-prior-flow/round-state.json" <<'JSON'
 {

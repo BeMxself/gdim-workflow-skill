@@ -5,11 +5,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN_ROUND_SCRIPT="${SCRIPT_DIR}/../run-gdim-round.sh"
 
 tmp_dir="$(mktemp -d)"
-workflow_rel=".tmp-state-events-$$"
+workflow_rel=".tmp-stage-sessions-$$"
 task_dir="${tmp_dir}/task"
 output_file="${tmp_dir}/run.output"
-state_file="${task_dir}/state/event-flow/round-state.json"
-workflow_abs="${PWD}/skills/${workflow_rel}/event-flow"
+counter_file="${tmp_dir}/codex-call-count"
+workflow_abs="${PWD}/skills/${workflow_rel}/stage-flow"
 
 cleanup() {
   rm -rf "${tmp_dir}"
@@ -18,16 +18,25 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "${tmp_dir}/bin" "${task_dir}/config" "${task_dir}/intents" "${task_dir}/state" "${task_dir}/logs"
-mkdir -p "skills/${workflow_rel}/event-flow"
+mkdir -p "skills/${workflow_rel}/stage-flow"
 
 cat >"${tmp_dir}/bin/codex" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
+counter_file="${GDIM_TEST_CODEX_COUNTER_FILE:?}"
 workflow_dir="${GDIM_TEST_WORKFLOW_DIR:?}"
-cat >/dev/null
 
+count=0
+if [ -f "${counter_file}" ]; then
+  count="$(cat "${counter_file}")"
+fi
+count=$((count + 1))
+printf "%s" "${count}" >"${counter_file}"
+
+cat >/dev/null
 mkdir -p "${workflow_dir}"
+
 cat >"${workflow_dir}/00-scope-definition.round1.md" <<'MD'
 # scope
 MD
@@ -41,21 +50,17 @@ cat >"${workflow_dir}/05-execution-summary.round1.md" <<'MD'
 # summary
 MD
 cat >"${workflow_dir}/03-gap-analysis.round1.md" <<'MD'
-# Gap Analysis - Round 1
-
-## 1. Round Gap (This Round's Deviations)
-- 有高优先级偏差，需阻塞
-
-## 4. Exit Decision
-**Decision**: BLOCKED
+# gap
+GDIM_EXIT_DECISION: CONTINUE
 MD
+
 exit 0
 EOF
 chmod +x "${tmp_dir}/bin/codex"
 
 cat >"${task_dir}/config/flows.json" <<JSON
 {
-  "project": "state-events",
+  "project": "stage-sessions",
   "workflow_dir": "${workflow_rel}",
   "design_doc": "docs/design/placeholder.md",
   "execution": { "runner": "codex" },
@@ -68,16 +73,18 @@ cat >"${task_dir}/config/flows.json" <<JSON
 }
 JSON
 
-cat >"${task_dir}/intents/01-event-flow.md" <<'MD'
+cat >"${task_dir}/intents/01-stage-flow.md" <<'MD'
 # intent
 MD
 
-PATH="${tmp_dir}/bin:${PATH}" GDIM_HEARTBEAT_SECONDS=0 GDIM_TEST_WORKFLOW_DIR="${workflow_abs}" \
+PATH="${tmp_dir}/bin:${PATH}" GDIM_HEARTBEAT_SECONDS=0 \
+  GDIM_TEST_CODEX_COUNTER_FILE="${counter_file}" \
+  GDIM_TEST_WORKFLOW_DIR="${workflow_abs}" \
   bash "${RUN_ROUND_SCRIPT}" \
-    --flow-slug "event-flow" \
+    --flow-slug "stage-flow" \
     --max-rounds 1 \
-    --workflow-dir "${workflow_rel}/event-flow" \
-    --intent-file "${task_dir}/intents/01-event-flow.md" \
+    --workflow-dir "${workflow_rel}/stage-flow" \
+    --intent-file "${task_dir}/intents/01-stage-flow.md" \
     --design-doc "docs/design/placeholder.md" \
     --modules "" \
     --allowed-paths "" \
@@ -85,24 +92,15 @@ PATH="${tmp_dir}/bin:${PATH}" GDIM_HEARTBEAT_SECONDS=0 GDIM_TEST_WORKFLOW_DIR="$
     --task-dir "${task_dir}" \
     --skip-clean-check >"${output_file}" 2>&1 || true
 
-if [ ! -f "${state_file}" ]; then
-  echo "expected round-state file: ${state_file}"
+call_count=0
+if [ -f "${counter_file}" ]; then
+  call_count="$(cat "${counter_file}")"
+fi
+
+if [ "${call_count}" -ne 6 ]; then
+  echo "expected 6 runner sessions in one round (one per GDIM stage), got ${call_count}"
   cat "${output_file}"
   exit 1
 fi
 
-if ! jq -e '.events | length >= 5' "${state_file}" >/dev/null 2>&1; then
-  echo "expected granular events in round-state.json"
-  cat "${state_file}"
-  exit 1
-fi
-
-for event_name in round_started runner_invoking runner_completed quality_gates_started quality_gates_finished round_blocked; do
-  if ! jq -e --arg e "${event_name}" '.events[] | select(.event == $e)' "${state_file}" >/dev/null 2>&1; then
-    echo "expected event: ${event_name}"
-    cat "${state_file}"
-    exit 1
-  fi
-done
-
-echo "PASS: round-state records granular progress events"
+echo "PASS: one round runs one session per stage"

@@ -155,8 +155,18 @@ elif [ -n "${TASK_DIR:-}" ] && [ -f "${INTENT_FILE}" ]; then
 else
     INTENT_FILE_ABS="${SCRIPT_DIR}/${INTENT_FILE}"
 fi
-TEMPLATE_FILE="${SCRIPT_DIR}/templates/round-prompt.md.tpl"
-RULES_FILE="${SCRIPT_DIR}/templates/gdim-rules-injection.md"
+if [[ "$DESIGN_DOC" == /* ]]; then
+    DESIGN_DOC_ABS="$DESIGN_DOC"
+else
+    DESIGN_DOC_ABS="${PROJECT_ROOT}/${DESIGN_DOC}"
+    if [ ! -f "$DESIGN_DOC_ABS" ]; then
+        GIT_TOPLEVEL="$(git -C "$PROJECT_ROOT" rev-parse --show-toplevel 2>/dev/null || true)"
+        if [ -n "$GIT_TOPLEVEL" ] && [ -f "${GIT_TOPLEVEL}/${DESIGN_DOC}" ]; then
+            DESIGN_DOC_ABS="${GIT_TOPLEVEL}/${DESIGN_DOC}"
+        fi
+    fi
+fi
+TEMPLATE_DIR="${SCRIPT_DIR}/templates/stages"
 
 mkdir -p "$WORKFLOW_DIR_ABS"
 init_round_state "$FLOW_SLUG"
@@ -203,13 +213,14 @@ invoke_runner() {
     local runner_pid=0
     local elapsed=0
     local next_heartbeat=0
+    local stage_label="${CURRENT_STAGE:-round}"
 
     mkdir -p "$(dirname "$log_file")"
     prompt_file="$(mktemp)"
     printf "%s" "$prompt_text" >"$prompt_file"
 
-    log_info "Invoking runner=${RUNNER} (timeout=${TIMEOUT_MINUTES}m)..."
-    append_round_event "$FLOW_SLUG" "${CURRENT_ROUND:-0}" "runner_invoking" "runner=${RUNNER};timeout=${TIMEOUT_MINUTES}m"
+    log_info "Invoking runner=${RUNNER} stage=${stage_label} (timeout=${TIMEOUT_MINUTES}m)..."
+    append_round_event "$FLOW_SLUG" "${CURRENT_ROUND:-0}" "runner_invoking" "runner=${RUNNER};stage=${stage_label};timeout=${TIMEOUT_MINUTES}m"
     run_runner "$RUNNER" "$prompt_file" "$log_file" "$TIMEOUT_MINUTES" "$PROJECT_ROOT" "$RUNNER_CMD" "$KIRO_AGENT" &
     runner_pid=$!
 
@@ -229,9 +240,9 @@ invoke_runner() {
 
     wait "$runner_pid" || exit_code=$?
     if [ "$exit_code" -eq 0 ]; then
-        append_round_event "$FLOW_SLUG" "${CURRENT_ROUND:-0}" "runner_completed" "runner=${RUNNER}"
+        append_round_event "$FLOW_SLUG" "${CURRENT_ROUND:-0}" "runner_completed" "runner=${RUNNER};stage=${stage_label}"
     else
-        append_round_event "$FLOW_SLUG" "${CURRENT_ROUND:-0}" "runner_failed" "runner=${RUNNER};exit=${exit_code}"
+        append_round_event "$FLOW_SLUG" "${CURRENT_ROUND:-0}" "runner_failed" "runner=${RUNNER};stage=${stage_label};exit=${exit_code}"
     fi
 
     rm -f "$prompt_file"
@@ -336,6 +347,131 @@ has_any_execute_phase_passed() {
     return 1
 }
 
+readonly GDIM_STAGE_ORDER="scope design plan execute summary gap"
+
+stage_index_of() {
+    local target="$1"
+    local idx=0
+    local stage=""
+    for stage in $GDIM_STAGE_ORDER; do
+        if [ "$stage" = "$target" ]; then
+            echo "$idx"
+            return 0
+        fi
+        idx=$((idx + 1))
+    done
+    echo "-1"
+    return 1
+}
+
+default_phase_file_for_round() {
+    local phase="$1"
+    local round="$2"
+    case "$phase" in
+        scope)        echo "${WORKFLOW_DIR_ABS}/00-scope-definition.round${round}.md" ;;
+        design)       echo "${WORKFLOW_DIR_ABS}/01-design.round${round}.md" ;;
+        plan)         echo "${WORKFLOW_DIR_ABS}/02-plan.round${round}.md" ;;
+        summary)      echo "${WORKFLOW_DIR_ABS}/05-execution-summary.round${round}.md" ;;
+        gap|gap-analysis) echo "${WORKFLOW_DIR_ABS}/03-gap-analysis.round${round}.md" ;;
+        execute-log)  echo "${WORKFLOW_DIR_ABS}/04-execution-log.round${round}.md" ;;
+        *)            echo "${WORKFLOW_DIR_ABS}/${phase}.round${round}.md" ;;
+    esac
+}
+
+resolve_phase_file_for_round() {
+    local phase="$1"
+    local round="$2"
+    local found=""
+    found=$(_find_gdim_phase_file "$WORKFLOW_DIR_ABS" "$round" "$phase" 2>/dev/null || true)
+    if [ -n "$found" ]; then
+        echo "$found"
+        return 0
+    fi
+    default_phase_file_for_round "$phase" "$round"
+}
+
+_add_missing_file_if_absent() {
+    local path="$1"
+    local var_name="$2"
+    if [ ! -f "$path" ]; then
+        eval "$var_name+=(\"\$path\")"
+    fi
+}
+
+validate_stage_required_inputs() {
+    local stage="$1"
+    local round="$2"
+    local workflow_base_abs
+    workflow_base_abs="$(dirname "$WORKFLOW_DIR_ABS")"
+    local shared_intent_abs="${workflow_base_abs}/00-intent.md"
+    local flow_intent_abs="$INTENT_FILE_ABS"
+    local scope_file
+    local design_file
+    local plan_file
+    local summary_file
+    local prev_gap_file_required
+    local missing_files=()
+    local item=""
+
+    scope_file="$(resolve_phase_file_for_round "scope" "$round")"
+    design_file="$(resolve_phase_file_for_round "design" "$round")"
+    plan_file="$(resolve_phase_file_for_round "plan" "$round")"
+    summary_file="$(resolve_phase_file_for_round "summary" "$round")"
+
+    case "$stage" in
+        scope)
+            _add_missing_file_if_absent "$flow_intent_abs" missing_files
+            if [ "$round" -gt 1 ]; then
+                prev_gap_file_required="$(resolve_phase_file_for_round "gap-analysis" "$((round - 1))")"
+                _add_missing_file_if_absent "$prev_gap_file_required" missing_files
+            fi
+            ;;
+        design)
+            _add_missing_file_if_absent "$flow_intent_abs" missing_files
+            _add_missing_file_if_absent "$scope_file" missing_files
+            _add_missing_file_if_absent "$DESIGN_DOC_ABS" missing_files
+            ;;
+        plan)
+            _add_missing_file_if_absent "$design_file" missing_files
+            ;;
+        execute)
+            _add_missing_file_if_absent "$plan_file" missing_files
+            _add_missing_file_if_absent "$design_file" missing_files
+            ;;
+        summary)
+            _add_missing_file_if_absent "$design_file" missing_files
+            _add_missing_file_if_absent "$plan_file" missing_files
+            ;;
+        gap)
+            _add_missing_file_if_absent "$flow_intent_abs" missing_files
+            _add_missing_file_if_absent "$design_file" missing_files
+            _add_missing_file_if_absent "$summary_file" missing_files
+            ;;
+        *)
+            ;;
+    esac
+
+    # Optional shared intent check: when present in workflow, enforce readability.
+    if [ -e "$shared_intent_abs" ] && [ ! -f "$shared_intent_abs" ]; then
+        _add_missing_file_if_absent "$shared_intent_abs" missing_files
+    fi
+
+    if [ "${#missing_files[@]}" -eq 0 ]; then
+        return 0
+    fi
+
+    log_error "Missing required input files for stage=${stage}, round=R${round}:"
+    for item in "${missing_files[@]}"; do
+        log_error "  - ${item}"
+    done
+
+    local missing_joined
+    missing_joined="$(IFS=','; echo "${missing_files[*]}")"
+    append_round_event "$FLOW_SLUG" "$round" "stage_input_missing" "stage=${stage};files=${missing_joined}"
+    append_progress "$FLOW_SLUG" "R${round}: stage=${stage} missing required inputs (${missing_joined})"
+    return 1
+}
+
 # --- Helper: Stage A human confirmation (ack file + TTY fallback) ---
 ACK_POLL_INTERVAL=10   # seconds between ack file checks
 ACK_TIMEOUT=1800       # 30 minutes default
@@ -351,7 +487,7 @@ stage_a_confirm() {
     af=$(ack_file "$FLOW_SLUG" "$round")
 
     log_info "[STAGE-A] Round R${round} completed. Waiting for human confirmation..."
-    log_info "[STAGE-A] Review logs: ${LOG_DIR}/${FLOW_SLUG}-R${round}.log"
+    log_info "[STAGE-A] Review logs: ${LOG_DIR}/${FLOW_SLUG}-R${round}-*.log"
     log_info "[STAGE-A] To approve: touch ${af}"
 
     # If TTY is actually usable, also accept ENTER
@@ -454,23 +590,41 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         log_info "Previous gap file: ${prev_gap_file:-none}"
     fi
 
-    # 2. Build prompt
+    # 2. Stage-by-stage session prompts (one conversation per GDIM phase)
     local_progress=$(progress_file "$FLOW_SLUG")
-    prompt=$(build_prompt \
-        "$TEMPLATE_FILE" \
-        "$RULES_FILE" \
-        "$INTENT_FILE_ABS" \
-        "$FLOW_SLUG" \
-        "$round" \
-        "$DESIGN_DOC" \
-        "$WORKFLOW_DIR" \
-        "$MODULES" \
-        "$local_progress" \
-        "$prev_gap_file" \
-        "$resume_phase")
+    stage_start_index=0
+    if [ -n "$resume_phase" ]; then
+        stage_start_index=$(stage_index_of "$resume_phase")
+        if [ "$stage_start_index" -lt 0 ]; then
+            log_warn "Unknown resume phase=${resume_phase}, fallback to scope"
+            stage_start_index=0
+        fi
+    fi
 
     if [ "$DRY_RUN" -eq 1 ]; then
-        log_info "[DRY-RUN] Would send prompt (${#prompt} chars) to runner=${RUNNER}"
+        stage_index=0
+        for stage_name in $GDIM_STAGE_ORDER; do
+            if [ "$stage_index" -lt "$stage_start_index" ]; then
+                stage_index=$((stage_index + 1))
+                continue
+            fi
+
+            stage_template_file="${TEMPLATE_DIR}/${stage_name}.md.tpl"
+            prompt=$(build_prompt \
+                "$stage_template_file" \
+                "$INTENT_FILE_ABS" \
+                "$FLOW_SLUG" \
+                "$round" \
+                "$DESIGN_DOC" \
+                "$WORKFLOW_DIR" \
+                "$MODULES" \
+                "$local_progress" \
+                "$prev_gap_file" \
+                "$stage_name" \
+                "$resume_phase")
+            log_info "[DRY-RUN] Would send stage=${stage_name} prompt (${#prompt} chars) to runner=${RUNNER}"
+            stage_index=$((stage_index + 1))
+        done
         log_info "[DRY-RUN] Skipping execution"
         round=$((round + 1))
         # If this was the last round in dry-run, exit 0 (not 2)
@@ -481,24 +635,78 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         continue
     fi
 
-    # 3. Execute runner with timeout
-    if [ -n "${TASK_DIR:-}" ]; then
-        local_log="${TASK_DIR}/logs/${FLOW_SLUG}-R${round}.log"
-    else
-        local_log="${SCRIPT_DIR}/../automation-logs/${FLOW_SLUG}-R${round}.log"
-    fi
+    # 3. Execute stage sessions with timeout
     agent_exit=0
     if [ "$resume_skip_runner" -eq 1 ]; then
         append_progress "$FLOW_SLUG" "R${round}: runner skipped by phase checkpoint"
     else
-        invoke_runner "$prompt" "$local_log" || agent_exit=$?
+        stage_index=0
+        stage_input_blocked=0
+        for stage_name in $GDIM_STAGE_ORDER; do
+            if [ "$stage_index" -lt "$stage_start_index" ]; then
+                stage_index=$((stage_index + 1))
+                continue
+            fi
 
-        if [ "$agent_exit" -ne 0 ]; then
-            log_warn "Agent exited with code ${agent_exit}"
-            append_progress "$FLOW_SLUG" "R${round}: agent exit=${agent_exit}"
-        else
-            log_info "Agent completed successfully"
-            append_progress "$FLOW_SLUG" "R${round}: agent completed"
+            if ! validate_stage_required_inputs "$stage_name" "$round"; then
+                stage_input_blocked=1
+                agent_exit=1
+                break
+            fi
+
+            stage_template_file="${TEMPLATE_DIR}/${stage_name}.md.tpl"
+            prompt=$(build_prompt \
+                "$stage_template_file" \
+                "$INTENT_FILE_ABS" \
+                "$FLOW_SLUG" \
+                "$round" \
+                "$DESIGN_DOC" \
+                "$WORKFLOW_DIR" \
+                "$MODULES" \
+                "$local_progress" \
+                "$prev_gap_file" \
+                "$stage_name" \
+                "$resume_phase")
+
+            if [ -n "${TASK_DIR:-}" ]; then
+                local_log="${TASK_DIR}/logs/${FLOW_SLUG}-R${round}-${stage_name}.log"
+            else
+                local_log="${SCRIPT_DIR}/../automation-logs/${FLOW_SLUG}-R${round}-${stage_name}.log"
+            fi
+
+            export CURRENT_STAGE="$stage_name"
+            append_round_event "$FLOW_SLUG" "$round" "stage_started" "stage=${stage_name}"
+            invoke_runner "$prompt" "$local_log" || agent_exit=$?
+
+            if [ "$agent_exit" -ne 0 ]; then
+                log_warn "Agent exited with code ${agent_exit} during stage=${stage_name}"
+                append_round_event "$FLOW_SLUG" "$round" "stage_failed" "stage=${stage_name};exit=${agent_exit}"
+                append_progress "$FLOW_SLUG" "R${round}: stage=${stage_name} exit=${agent_exit}"
+                break
+            fi
+
+            log_info "Stage ${stage_name} completed successfully"
+            append_round_event "$FLOW_SLUG" "$round" "stage_completed" "stage=${stage_name}"
+            append_progress "$FLOW_SLUG" "R${round}: stage=${stage_name} completed"
+
+            # Keep phase checkpoints up-to-date so interruptions can resume from next stage.
+            detect_phase_status "$FLOW_SLUG" "$round" "$WORKFLOW_DIR_ABS" "$BASELINE_COMMIT"
+            phase_summary=$(get_phase_summary "$FLOW_SLUG" "$round")
+            append_progress "$FLOW_SLUG" "R${round} phases (mid-round): ${phase_summary}"
+
+            stage_index=$((stage_index + 1))
+        done
+        export CURRENT_STAGE=""
+
+        if [ "$stage_input_blocked" -eq 1 ]; then
+            log_error "Stage input precheck failed, marking BLOCKED"
+            append_round_event "$FLOW_SLUG" "$round" "round_blocked" "reason=stage_input_missing"
+            append_progress "$FLOW_SLUG" "R${round}: BLOCKED (stage input precheck failed)"
+            exit 1
+        fi
+
+        if [ "$agent_exit" -eq 0 ]; then
+            append_progress "$FLOW_SLUG" "R${round}: all stage sessions completed"
         fi
     fi
 
@@ -609,7 +817,9 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
                 retry_log="${SCRIPT_DIR}/../automation-logs/${FLOW_SLUG}-R${round}-retry${local_retry_count}.log"
             fi
             retry_exit=0
+            export CURRENT_STAGE="retry-${FAILURE_TYPE}-${local_retry_count}"
             invoke_runner "$retry_prompt" "$retry_log" || retry_exit=$?
+            export CURRENT_STAGE=""
 
             # Re-run gates (with baseline)
             gate_result=0

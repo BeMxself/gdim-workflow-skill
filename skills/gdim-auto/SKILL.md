@@ -293,6 +293,8 @@ exec "${AUTOMATION_DIR}/run-gdim-flows.sh" --task-dir "$TASK_DIR" "$@"
 - 执行器配置建议使用 `execution.runner` 与 `flows[].runner`；旧字段 `executor` 与 `flows[].executor` 仍可兼容读取
 - Intent 文件应该足够详细，让自动化 agent 能独立完成每个流程
 - 当 runner=kiro 时，运行前会自动检查并确保存在 `gdim-kiro-opus` 与 `gdim-kiro-sonnet` 两个 agent（包含 gdim skills 资源）
+- `run-gdim-round.sh` 在同一轮内会按 `scope → design → plan → execute → summary → gap` 分阶段触发独立会话（每阶段一次 runner 调用）
+- 每阶段执行前会进行必需输入文件硬校验（缺失即 BLOCKED），防止在缺依赖状态下继续推进流程
 - 执行 runner 时会周期输出 `Runner still running... elapsed=<N>s`，默认间隔为 20 秒；可通过 `GDIM_HEARTBEAT_SECONDS` 覆盖（`0` 为关闭）
 - 发生 `path_violation` 时会默认自动扩展 `allowed_paths`（按越界文件目录前缀）并继续执行，不再因该类失败直接 BLOCK
 - 如果设计文档内容不足以拆解为多个流程，可以只生成一个流程
