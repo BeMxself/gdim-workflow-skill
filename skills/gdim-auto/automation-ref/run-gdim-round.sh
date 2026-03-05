@@ -417,6 +417,8 @@ auto_commit_round_gdim_docs() {
     local abs_file=""
     local rel_file=""
     local commit_msg=""
+    local pending_flow_files=""
+    local file=""
 
     [ "$AUTO_COMMIT_GDIM_DOCS" -eq 1 ] || return 0
     [ "$DRY_RUN" -eq 0 ] || return 0
@@ -435,6 +437,21 @@ auto_commit_round_gdim_docs() {
     [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
     abs_file="${WORKFLOW_DIR_ABS}/99-final-report.md"
     [ -f "$abs_file" ] && { rel_file="$(_to_project_relative_path "$abs_file" || true)"; [ -n "$rel_file" ] && doc_files+=("$rel_file"); }
+
+    # Also include any pending files under this flow directory. This captures:
+    # - files created outside the fixed naming list (e.g. 00-intent.md link/copy)
+    # - prior-round docs modified in later rounds
+    pending_flow_files="$(git -C "$PROJECT_ROOT" diff --name-only --cached -- "$WORKFLOW_DIR" 2>/dev/null || true)"
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+        doc_files+=("$file")
+    done <<< "$pending_flow_files"
+
+    pending_flow_files="$(git -C "$PROJECT_ROOT" ls-files --others --modified --exclude-standard -- "$WORKFLOW_DIR" 2>/dev/null || true)"
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+        doc_files+=("$file")
+    done <<< "$pending_flow_files"
 
     [ "${#doc_files[@]}" -gt 0 ] || return 0
 

@@ -342,4 +342,4 @@ These skills are designed to be iteratively improved:
 
 ## Version
 
-**v1.6.0** - Enforced per-round code commits (default on) + commit-missing directed retry + retry default raised to 5 with per-failure-type counters
+**v1.6.1** - Auto-commit now includes all pending flow-directory docs, fixing clean-check blocks caused by cross-round doc updates

@@ -1,5 +1,17 @@
 # 更新日志
 
+## v1.6.1 - 2026-03-05
+
+### /gdim-auto 文档自动提交补强（跨轮次修改兜底）
+
+- 修复每轮文档自动提交遗漏场景：当后续轮次回写前一轮文档（如 `05-execution-summary.round1.md`）或在 flow 目录新增文档（如 `00-intent.md`）时，未被固定文件清单覆盖，可能导致下一个 flow clean-check 被脏工作区阻塞。
+- `auto_commit_round_gdim_docs` 现在除固定清单外，还会追加提交当前 flow 目录下所有 pending 文件（staged/modified/untracked），确保 flow 闭环后工作区保持干净。
+
+### 测试补充
+
+- 新增并通过：
+  - `test-auto-commit-captures-cross-round-flow-doc-updates.sh`
+
 ## v1.6.0 - 2026-03-05
 
 ### /gdim-auto 轮次提交纪律与重试体系升级
