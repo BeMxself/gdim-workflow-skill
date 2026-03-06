@@ -26,13 +26,17 @@ $gdim-final
 Before generating Final Report, verify:
 - ✅ Latest Gap Analysis shows no High Severity gaps
 - ✅ Intent Coverage is 100%
-- ✅ User confirmed work is complete
+- ✅ User confirmed completion OR workflow has explicit final decision marker (`GDIM_EXIT_DECISION: FINAL_REPORT`)
 
-## Inputs
+## Inputs (Signal-First)
 
-- `00-intent.md`
+**Required**:
+- `00-intent.md` (if workflow has flow-intent file, read it together)
 - All `03-gap-analysis.roundN.md` files
-- All `05-execution-summary.roundN.md` files
+
+**Optional (gated)**:
+- `05-execution-summary.roundN.md` files
+- Other process files only when required inputs cannot support a concrete final-report statement.
 
 ## Output
 

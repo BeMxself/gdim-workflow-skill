@@ -342,4 +342,4 @@ These skills are designed to be iteratively improved:
 
 ## Version
 
-**v1.6.1** - Auto-commit now includes all pending flow-directory docs, fixing clean-check blocks caused by cross-round doc updates
+**v1.7.0** - Stage prompts and GDIM skills now follow “minimal required inputs + gated optional reads” for better signal-to-noise and stronger weighting of critical context

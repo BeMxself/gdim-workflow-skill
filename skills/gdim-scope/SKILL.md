@@ -26,9 +26,20 @@ $gdim-scope <round_number>
 - **Round 1**: Scope from Intent only
 - **Round 2+**: Scope from Intent + Gap Analysis
 
+## Signal-First Input Policy
+
+- Start from required inputs only.
+- Read optional inputs only when a specific unresolved scope decision remains.
+- Before reading optional input, state: unresolved decision, target file, and purpose.
+- Read one optional file at a time; stop when the decision converges.
+- Information priority: Intent + round-required inputs > optional references.
+
 ## Round 1 Rules (Baseline: Intent Only)
 
-**Input**: `00-intent.md`
+**Required Input**: `00-intent.md`
+
+**Optional Input (gated)**:
+- External/source documents only when Intent wording is ambiguous for current scope split.
 
 **Output**: `00-scope-definition.round1.md`
 
@@ -73,9 +84,12 @@ Based on baseline testing, you WILL be tempted to include everything. Resist:
 
 ## Round 2+ Rules (Gap-Driven)
 
-**Input**:
+**Required Input**:
 - `00-intent.md`
 - `03-gap-analysis.round(N-1).md`
+
+**Optional Input (gated)**:
+- External/source documents only when Intent + previous Gap still cannot converge to one scope decision.
 
 **Output**: `00-scope-definition.roundN.md`
 

@@ -1,5 +1,35 @@
 # 更新日志
 
+## v1.7.0 - 2026-03-06
+
+### /gdim-auto 提示词信噪比收敛
+
+- 阶段模板（scope/design/plan/execute/summary/gap）统一为“必读最小集 + 可选输入读取闸门”：
+  - 默认禁止读取可选输入
+  - 仅在必读输入冲突或无法收敛到单一决策时按需读取
+  - 强制目的化读取（未决问题/目标文件/读取目的）并要求收敛即停
+  - 明确信息权重：Intent 与阶段必读输入高于可选输入
+- 统一术语为“设计来源文档（外部输入）”，避免与 GDIM `01-design.roundN.md` 产物混淆。
+- `prompt-builder.sh` 清理历史无效注入路径（intent/progress/prev_gaps 大块上下文），仅保留当前阶段必要注入，减少噪声与重复。
+
+### GDIM 阶段 Skills 输入策略统一
+
+- `gdim-scope/design/plan/execute/summary/gap/final` 的 `SKILL.md` 全部升级为 Signal-First 输入规范：
+  - 明确 Required 与 Optional(gated) 输入
+  - 约束可选输入仅用于解决具体未决决策
+  - 强调单次单文件读取与收敛优先
+- `gdim-final` 前置条件与自动化行为对齐：支持通过显式 `GDIM_EXIT_DECISION: FINAL_REPORT` 触发收敛。
+
+### 测试与同步
+
+- 关键回归通过：
+  - `test-stage-prompts-inject-required-files.sh`
+  - `test-round-uses-stage-specific-templates.sh`
+  - `test-round-runs-stage-by-stage-sessions.sh`
+  - `test-gap-final-decision-triggers-gdim-final-stage.sh`
+  - `test-stage-input-precheck-blocks-missing-files.sh`
+- 公共脚本已同步到 `automation/ai-coding`；skills 已同步到 `~/.kiro/skills`。
+
 ## v1.6.1 - 2026-03-05
 
 ### /gdim-auto 文档自动提交补强（跨轮次修改兜底）

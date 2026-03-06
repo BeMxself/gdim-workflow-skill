@@ -21,12 +21,16 @@ Codex (skills):
 $gdim-design <round_number>
 ```
 
-## Inputs
+## Inputs (Signal-First)
 
+**Required**:
 - `00-scope-definition.round{round_number}.md`
-- `00-intent.md`
-- `03-gap-analysis.round{round_number-1}.md` (if Round 2+)
-- External reference docs (if specified in Intent)
+- Intent baseline (`00-intent.md`; if workflow has flow-intent file, read it together)
+- `03-gap-analysis.round{round_number-1}.md` (Round 2+ only)
+
+**Optional (gated)**:
+- External/source reference docs only when required inputs cannot resolve a concrete design decision.
+- Read one optional file at a time and stop when the decision converges.
 
 ## Output
 
@@ -134,7 +138,7 @@ From baseline testing: You will be tempted to design "complete" systems. Resist.
 
 ## External References
 
-You MAY reference external docs (API specs, design systems) as design basis. Cite them in `external_refs`.
+You MAY reference external docs (API specs, design systems) as design basis, but only when required inputs cannot resolve a concrete design decision. Cite used refs in `external_refs`.
 
 ## Uncertainty Handling
 

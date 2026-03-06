@@ -102,24 +102,26 @@ for f in "${scope_prompt}" "${design_prompt}" "${plan_prompt}" "${execute_prompt
   [[ -f "$f" ]] || { echo "missing prompt file: $f"; cat "${output_file}"; exit 1; }
 done
 
-expected_scope_file="${workflow_rel}/required-inputs-flow/00-scope-definition.round1.md"
 expected_design_file="${workflow_rel}/required-inputs-flow/01-design.round1.md"
 expected_plan_file="${workflow_rel}/required-inputs-flow/02-plan.round1.md"
 expected_summary_file="${workflow_rel}/required-inputs-flow/05-execution-summary.round1.md"
 expected_shared_intent="${workflow_rel}/00-intent.md"
 
-# Design stage must inject intent + scope + design source
-grep -q "${expected_shared_intent}" "${design_prompt}" || { echo "design prompt missing shared intent"; cat "${design_prompt}"; exit 1; }
+# Scope stage must inject shared + flow intent
+grep -q "${expected_shared_intent}" "${scope_prompt}" || { echo "scope prompt missing shared intent"; cat "${scope_prompt}"; exit 1; }
+grep -q "${intent_abs}" "${scope_prompt}" || { echo "scope prompt missing flow intent"; cat "${scope_prompt}"; exit 1; }
+
+# Design stage must inject flow intent + design source
 grep -q "${intent_abs}" "${design_prompt}" || { echo "design prompt missing flow intent"; cat "${design_prompt}"; exit 1; }
-grep -q "${expected_scope_file}" "${design_prompt}" || { echo "design prompt missing scope file"; cat "${design_prompt}"; exit 1; }
 grep -q "${design_doc_abs}" "${design_prompt}" || { echo "design prompt missing design source"; cat "${design_prompt}"; exit 1; }
 
-# Plan stage must inject design file
+# Plan stage must inject flow intent + design file
+grep -q "${intent_abs}" "${plan_prompt}" || { echo "plan prompt missing flow intent"; cat "${plan_prompt}"; exit 1; }
 grep -q "${expected_design_file}" "${plan_prompt}" || { echo "plan prompt missing design file"; cat "${plan_prompt}"; exit 1; }
 
-# Execute stage must inject plan + design
+# Execute stage must inject flow intent + plan
+grep -q "${intent_abs}" "${execute_prompt}" || { echo "execute prompt missing flow intent"; cat "${execute_prompt}"; exit 1; }
 grep -q "${expected_plan_file}" "${execute_prompt}" || { echo "execute prompt missing plan file"; cat "${execute_prompt}"; exit 1; }
-grep -q "${expected_design_file}" "${execute_prompt}" || { echo "execute prompt missing design file"; cat "${execute_prompt}"; exit 1; }
 
 # Summary stage must inject design + plan
 grep -q "${expected_design_file}" "${summary_prompt}" || { echo "summary prompt missing design file"; cat "${summary_prompt}"; exit 1; }

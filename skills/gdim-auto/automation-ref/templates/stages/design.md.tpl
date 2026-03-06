@@ -3,15 +3,25 @@
 ## Design 阶段专用规则
 - 本会话只允许执行：`{{CURRENT_STAGE_CMD}}`
 - 只做设计，不做 plan/execute/summary/gap
-- 设计必须绑定 scope，不得擅自扩 scope
-- 设计修改必须可追溯到 Intent 与 Gap（R2+）
+- 设计主链路是“流程 Intent + 设计来源文档”
+- 不得擅自扩 scope；需要越界时必须显式标记并停止
 
 ## 必读输入文件（执行前必须逐个读取）
-- 共享 Intent：`{{SHARED_INTENT_FILE}}`
 - 流程 Intent：`{{FLOW_INTENT_FILE}}`
-- 本轮 Scope：`{{ROUND_SCOPE_FILE}}`
-- 上一轮 Gap：`{{PREV_GAP_FILE}}`（仅 R2+ 强制）
 - 设计来源文档（外部输入）：`{{DESIGN_SOURCE_FILE}}`
+
+## 可选补充输入（仅在必要时读取）
+- 本轮 Scope：`{{ROUND_SCOPE_FILE}}`
+- 上一轮 Gap：`{{PREV_GAP_FILE}}`
+- 共享 Intent：`{{SHARED_INTENT_FILE}}`
+
+## 可选输入读取闸门（严格）
+- 默认禁止读取可选补充输入
+- 仅当“必读输入冲突”或“仅靠必读输入无法收敛到单一设计决策”时，才允许读取
+- 读取前必须先在响应中声明：未决问题、目标文件、读取目的
+- 每次只允许新增读取 1 个可选输入；读取后必须回填：结论变化（收敛/无变化）
+- 结论一旦收敛，立即停止继续读取可选输入
+- 信息权重：Intent 与必读输入 > 可选输入；可选输入不得覆盖硬约束
 
 ## 本阶段输出文件
 - Design 文件：`{{ROUND_DESIGN_FILE}}`
@@ -20,18 +30,9 @@
 - 流程: {{FLOW_SLUG}}
 - 轮次: R{{ROUND}}
 - 阶段: {{CURRENT_STAGE}}
-- 设计文档: {{DESIGN_DOC}}
+- 设计来源文档（外部输入）: {{DESIGN_SOURCE_FILE}}
 - 工作流目录: {{WORKFLOW_DIR}}
 - 涉及模块: {{MODULES}}
-
-## Intent（不可变基线）
-{{INTENT_CONTENT}}
-
-## 上一轮进展
-{{PROGRESS_CONTENT}}
-
-## 上一轮 Gap（仅 R2+ 参考）
-{{PREV_GAPS}}
 
 ## 当前阶段任务
 {{ROUND_TASK}}

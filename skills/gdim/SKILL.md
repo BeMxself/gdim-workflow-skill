@@ -20,6 +20,7 @@ For the full long-form specification, read `references/docs/GDIM 规范.md`.
 6. **No implementation without Plan** - Design → Plan → Execute, always
 7. **One file per request** - Don't batch multiple stages
 8. **Uncertain → ask user** - Don't rationalize, don't assume
+9. **Optional context is gated** - Start with required inputs only; read optional files only to resolve a specific unresolved decision
 
 ## Exit Condition
 

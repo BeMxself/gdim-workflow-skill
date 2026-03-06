@@ -27,9 +27,17 @@ Loads execution rules for current round.
 
 **Follow the plan exactly. Deviations = stop and update plan first.**
 
-## Input
+## Inputs (Signal-First)
 
-`02-plan.round{round_number}.md`
+**Required**:
+- `02-plan.round{round_number}.md`
+- Intent baseline (`00-intent.md`; if workflow has flow-intent file, read it together)
+
+**Optional (gated)**:
+- `01-design.round{round_number}.md`
+- `00-scope-definition.round{round_number}.md`
+- `03-gap-analysis.round{round_number-1}.md`
+- Only read optional input when required inputs cannot resolve one concrete execution decision.
 
 ## During Execution
 

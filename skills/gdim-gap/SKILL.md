@@ -21,11 +21,17 @@ Codex (skills):
 $gdim-gap <round_number>
 ```
 
-## Inputs
+## Inputs (Signal-First)
 
-- `00-intent.md`
+**Required**:
+- `00-intent.md` (if workflow has flow-intent file, read it together)
 - `01-design.round{round_number}.md`
 - `05-execution-summary.round{round_number}.md`
+
+**Optional (gated)**:
+- `00-scope-definition.round{round_number}.md`
+- `03-gap-analysis.round{round_number-1}.md`
+- Extra evidence files (tests, logs) only when required inputs cannot resolve a single Gap classification/decision.
 
 ## Output
 

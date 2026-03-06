@@ -21,9 +21,16 @@ Codex (skills):
 $gdim-plan <round_number>
 ```
 
-## Input
+## Inputs (Signal-First)
 
-`01-design.round{round_number}.md`
+**Required**:
+- `01-design.round{round_number}.md`
+- Intent baseline (`00-intent.md`; if workflow has flow-intent file, read it together)
+
+**Optional (gated)**:
+- `00-scope-definition.round{round_number}.md`
+- `03-gap-analysis.round{round_number-1}.md`
+- External/source docs only when required inputs cannot resolve a concrete planning decision.
 
 ## Output
 

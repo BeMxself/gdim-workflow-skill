@@ -528,7 +528,7 @@ ${files_list}
 ## 当前上下文
 - 流程: ${FLOW_SLUG}
 - 收敛轮次: R${round}
-- 设计文档: ${DESIGN_DOC}
+- 设计来源文档（外部输入）: ${DESIGN_DOC}
 - 工作流目录: ${WORKFLOW_DIR_ABS}
 - 涉及模块: ${MODULES}
 
@@ -654,15 +654,15 @@ validate_stage_required_inputs() {
             ;;
         design)
             _add_missing_file_if_absent "$flow_intent_abs" missing_files
-            _add_missing_file_if_absent "$scope_file" missing_files
             _add_missing_file_if_absent "$DESIGN_DOC_ABS" missing_files
             ;;
         plan)
+            _add_missing_file_if_absent "$flow_intent_abs" missing_files
             _add_missing_file_if_absent "$design_file" missing_files
             ;;
         execute)
+            _add_missing_file_if_absent "$flow_intent_abs" missing_files
             _add_missing_file_if_absent "$plan_file" missing_files
-            _add_missing_file_if_absent "$design_file" missing_files
             ;;
         summary)
             _add_missing_file_if_absent "$design_file" missing_files

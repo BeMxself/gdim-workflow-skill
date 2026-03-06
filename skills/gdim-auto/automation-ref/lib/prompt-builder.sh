@@ -38,26 +38,6 @@ build_prompt() {
     local output
     output=$(cat "$template_file")
 
-    # Read intent content
-    local intent_content=""
-    if [ -f "$intent_file" ]; then
-        intent_content=$(cat "$intent_file")
-    fi
-
-    # Read progress content
-    local progress_content="(首轮，无历史进展)"
-    if [ -f "$progress_file" ] && [ -s "$progress_file" ]; then
-        progress_content=$(cat "$progress_file")
-    fi
-
-    # Read previous gaps
-    local prev_gaps=""
-    if [ "$round" -gt 1 ] && [ -n "$prev_gaps_file" ] && [ -f "$prev_gaps_file" ]; then
-        prev_gaps=$(cat "$prev_gaps_file")
-    else
-        prev_gaps="(首轮，无上一轮 Gap)"
-    fi
-
     # Build stage task section
     local workflow_base
     workflow_base=$(dirname "$workflow_dir")
@@ -85,56 +65,65 @@ build_prompt() {
     if [ -n "$resume_phase" ]; then
         resume_note="检测到本轮 phase 断点恢复：已通过阶段不要重做，只补齐当前阶段及后续阶段。"
     fi
-
     local round_task
     case "$stage_name" in
         scope)
             if [ "$round" -eq 1 ]; then
-                round_task="1. 共享 Intent 已存在于 ${workflow_base}/00-intent.md，无需重建。如果本流程目录下没有 00-intent.md，创建一个符号链接或副本指向共享 Intent。
+                round_task="1. 先读取共享 Intent 与流程 Intent，锁定本轮边界与不可突破约束。
 2. ${resume_note}
-3. 仅调用 ${stage_cmd}，定义 R${round} Scope（≤3 scope items, ≤3 core classes）。
-4. 当前会话到此结束，不要执行 design/plan/execute/summary/gap。"
+3. 仅调用 ${stage_cmd}，定义 R${round} Scope（建议 In Scope ≤3、核心类 ≤3）。
+4. 如存在未决问题，按“可选输入读取闸门”按需读取设计来源文档 ${design_doc} 消歧。
+5. 当前会话到此结束，不要执行 design/plan/execute/summary/gap。"
             else
-                round_task="1. 读取上一轮 Gap Analysis，选择未关闭的 gap 作为本轮 scope。
+                round_task="1. 先读取共享 Intent、流程 Intent 与上一轮 Gap Analysis，按未关闭 Gap 收敛本轮范围。
 2. ${resume_note}
 3. 仅调用 ${stage_cmd}，定义 R${round} Scope。
-4. 当前会话到此结束，不要执行后续阶段。"
+4. 如存在未决问题，按“可选输入读取闸门”按需读取设计来源文档 ${design_doc} 消歧。
+5. 当前会话到此结束，不要执行后续阶段。"
             fi
             ;;
         design)
-            round_task="1. 读取本轮 scope 产物与设计文档（${design_doc}）相关章节，确保不偏离已评审架构决策。
+            round_task="1. 先读取流程 Intent 与设计来源文档（${design_doc}），基于目标与外部约束产出设计。
 2. ${resume_note}
-3. 仅调用 ${stage_cmd}，输出本轮设计并声明驱动的 GAP-ID。
-4. 当前会话到此结束，不要执行 plan/execute/summary/gap。"
+3. 仅调用 ${stage_cmd}，输出本轮设计并声明驱动的 GAP-ID（若有）。
+4. 如有未决问题，按“可选输入读取闸门”按需读取 scope/上一轮 gap/共享 intent 消歧。
+5. 当前会话到此结束，不要执行 plan/execute/summary/gap。"
             ;;
         plan)
-            round_task="1. 读取本轮 design 产物。
+            round_task="1. 先读取流程 Intent 与本轮 design 产物，确保计划与目标、约束保持一致。
 2. ${resume_note}
 3. 仅调用 ${stage_cmd}，生成可执行计划。
-4. 当前会话到此结束，不要执行 execute/summary/gap。"
+4. 如有未决问题，按“可选输入读取闸门”按需读取 scope/gap/设计来源文档做风险消歧，但不替代 design→plan 主链路。
+5. 当前会话到此结束，不要执行 execute/summary/gap。"
             ;;
         execute)
-            round_task="1. 读取本轮 plan 产物并按计划实现。
+            round_task="1. 先读取流程 Intent 与本轮 plan 产物，按计划实现并对齐目标边界。
 2. ${resume_note}
 3. 仅调用 ${stage_cmd}，并运行 \`mvn compile -pl ${modules} -am\`（若 modules 为空则按实际项目约束处理）。
-4. 当前会话到此结束，不要执行 summary/gap。"
+4. 如有未决问题，按“可选输入读取闸门”按需读取 design/scope/上一轮 gap 辅助决策，但不得擅自扩 scope。
+5. 当前会话到此结束，不要执行 summary/gap。"
             ;;
         summary)
-            round_task="1. 读取本轮 execute 结果与实际代码状态。
+            round_task="1. 读取本轮 design/plan、实际代码变更与执行结果证据（含可用执行日志）。
 2. ${resume_note}
-3. 仅调用 ${stage_cmd}，如实记录执行结果（反映现实而非设计意图）。
-4. 当前会话到此结束，不要执行 gap。"
+3. 仅调用 ${stage_cmd}，输出事实性 summary：禁止评价、辩护、改进建议与 gap 结论。
+4. summary 至少覆盖：Completed、Deviations from Plan、Discoveries、Temporary Decisions、Blockers、Files Changed。
+5. 如有未决问题，按“可选输入读取闸门”按需读取执行日志/测试输出/上一轮 gap 消歧。
+6. 当前会话到此结束，不要执行 gap。"
             ;;
         gap)
-            round_task="1. 读取本轮 summary 与已产出的 GDIM 文档。
+            round_task="1. 读取 intent/design/summary（必要时补充 scope 与上一轮 gap）。
 2. ${resume_note}
-3. 仅调用 ${stage_cmd}，输出 gap-analysis 并给出轮次决策。
-4. gap-analysis 末尾必须追加机器可解析决策行（单独一行）：
+3. 仅调用 ${stage_cmd}，输出两层 gap-analysis：Round Gap（本轮偏差）+ Intent Coverage（整体覆盖）。
+4. 每个 Gap 必须包含分类（G1-G6）、Severity、Expected/Actual、Impact 与闭环策略。
+5. Exit Decision 必须遵循：仅当“无 High Severity Gap 且 Intent 覆盖完成”时可给 FINAL_REPORT。
+6. 如有未决问题，按“可选输入读取闸门”按需读取 scope/上一轮 gap/其他过程文件消歧。
+7. gap-analysis 末尾必须追加机器可解析决策行（单独一行）：
    - \`GDIM_EXIT_DECISION: CONTINUE\`
    - \`GDIM_EXIT_DECISION: FINAL_REPORT\`
    - \`GDIM_EXIT_DECISION: BLOCKED\`
-5. 本轮结束前必须提交代码变更：检查并提交当前任务目录（\`${workflow_base}\`）之外的代码文件。
-6. 必须执行 \`git add\` + \`git commit\`，提交信息由你基于本轮改动生成，且需包含标记：\`gdim(${flow_slug}): R${round}\`。"
+8. 本轮结束前必须提交代码变更：检查并提交当前任务目录（\`${workflow_base}\`）之外的代码文件。
+9. 必须执行 \`git add\` + \`git commit\`，提交信息由你基于本轮改动生成，且需包含标记：\`gdim(${flow_slug}): R${round}\`。"
             ;;
         *)
             round_task="1. ${resume_note}
@@ -147,9 +136,6 @@ build_prompt() {
     # Write content blocks to temp files for awk processing
     local tmp_dir
     tmp_dir=$(mktemp -d)
-    echo "$intent_content" > "$tmp_dir/intent"
-    echo "$progress_content" > "$tmp_dir/progress"
-    echo "$prev_gaps" > "$tmp_dir/gaps"
     echo "$round_task" > "$tmp_dir/task"
 
     # Simple sed replacements for single-line values
@@ -174,12 +160,9 @@ build_prompt() {
 
     # For multiline blocks, use awk
     local result="$output"
-    for placeholder in INTENT_CONTENT PROGRESS_CONTENT PREV_GAPS ROUND_TASK; do
+    for placeholder in ROUND_TASK; do
         local content_file
         case "$placeholder" in
-            INTENT_CONTENT)   content_file="$tmp_dir/intent" ;;
-            PROGRESS_CONTENT) content_file="$tmp_dir/progress" ;;
-            PREV_GAPS)        content_file="$tmp_dir/gaps" ;;
             ROUND_TASK)       content_file="$tmp_dir/task" ;;
         esac
         result=$(awk -v placeholder="{{${placeholder}}}" -v file="$content_file" '

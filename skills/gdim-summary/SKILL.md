@@ -21,12 +21,18 @@ Codex (skills):
 $gdim-summary <round_number>
 ```
 
-## Inputs
+## Inputs (Signal-First)
 
+**Required**:
 - `01-design.round{round_number}.md`
 - `02-plan.round{round_number}.md`
 - Actual code changes
+
+**Optional (gated)**:
 - `04-execution-log.round{round_number}.md` (if exists)
+- Compile/test output for this round
+- `03-gap-analysis.round{round_number-1}.md`
+- Only read optional input when required inputs cannot establish a single factual summary statement.
 
 ## Output
 
