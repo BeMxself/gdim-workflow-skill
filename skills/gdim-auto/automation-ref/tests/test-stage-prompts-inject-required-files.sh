@@ -58,6 +58,7 @@ cat >"${task_dir}/config/flows.json" <<JSON
   "project": "stage-required-inputs",
   "workflow_dir": "${workflow_rel}",
   "design_doc": "${design_doc_abs}",
+  "refactor_posture": "balanced",
   "execution": { "runner": "codex" },
   "retry_limits": {
     "compile_failed": 0,
@@ -131,5 +132,11 @@ grep -q "${expected_plan_file}" "${summary_prompt}" || { echo "summary prompt mi
 grep -q "${expected_shared_intent}" "${gap_prompt}" || { echo "gap prompt missing shared intent"; cat "${gap_prompt}"; exit 1; }
 grep -q "${expected_design_file}" "${gap_prompt}" || { echo "gap prompt missing design file"; cat "${gap_prompt}"; exit 1; }
 grep -q "${expected_summary_file}" "${gap_prompt}" || { echo "gap prompt missing summary file"; cat "${gap_prompt}"; exit 1; }
+
+# Task-level posture must be visible in prompts and closure requirements
+grep -q "重构姿态: balanced" "${design_prompt}" || { echo "design prompt missing balanced posture context"; cat "${design_prompt}"; exit 1; }
+grep -q "重构姿态: balanced" "${execute_prompt}" || { echo "execute prompt missing balanced posture context"; cat "${execute_prompt}"; exit 1; }
+grep -q "GDIM_REFACTOR_POSTURE:" "${gap_prompt}" || { echo "gap prompt missing GDIM_REFACTOR_POSTURE requirement"; cat "${gap_prompt}"; exit 1; }
+grep -q "GDIM_FRACTURE_STATUS:" "${gap_prompt}" || { echo "gap prompt missing GDIM_FRACTURE_STATUS requirement"; cat "${gap_prompt}"; exit 1; }
 
 echo "PASS: stage prompts inject required GDIM files"

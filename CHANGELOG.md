@@ -1,5 +1,25 @@
 # 更新日志
 
+## v1.7.1 - 2026-03-07
+
+### /gdim-auto refactor posture 与决策缺口收敛
+
+- 新增 `refactor_posture`：支持任务级默认 + flow 级覆盖，取值为 `conservative` / `balanced` / `aggressive`，默认 `balanced`。
+- stage prompt 新增“重构姿态纪律”，在 design / plan / execute / gap 中显式约束兼容性与设计一致性的优先级。
+- gap 阶段新增机器可解析字段：
+  - `GDIM_REFACTOR_POSTURE`
+  - `GDIM_FRACTURE_STATUS`
+- `GDIM_FRACTURE_STATUS: NEEDS_DECISION` 现在是全局硬阻断信号：无论任何 posture，均不得自动进入 `FINAL_REPORT`。
+
+### 测试与回归
+
+- 新增并通过：
+  - `test-refactor-posture-flow-override.sh`
+  - `test-gap-fracture-status-blocks-needs-decision-final.sh`
+- 更新并通过：
+  - `test-stage-prompts-inject-required-files.sh`
+  - `test-gap-final-decision-triggers-gdim-final-stage.sh`
+
 ## v1.7.0 - 2026-03-06
 
 ### /gdim-auto 提示词信噪比收敛

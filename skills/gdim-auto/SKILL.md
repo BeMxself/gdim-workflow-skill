@@ -137,6 +137,8 @@ bash automation/ai-coding/sync-automation.sh "${REFERENCE_DIR}" automation/ai-co
 - 有共同依赖的流程可以并行（depends_on 相同）
 - 集成/非功能性需求放在最后
 - 每个流程的 max_rounds 默认 12，stage 默认 "B"
+- 任务可设置默认 `refactor_posture`，取值为 `conservative` / `balanced` / `aggressive`，默认 `balanced`
+- 单个流程可覆盖 `refactor_posture`；flow 级优先于任务级默认
 - 最后一个流程（集成/收尾）stage 设为 "C"
 
 ### Step 3: 生成任务目录
@@ -152,6 +154,7 @@ bash automation/ai-coding/sync-automation.sh "${REFERENCE_DIR}" automation/ai-co
   "project": "<task-slug>",
   "workflow_dir": ".ai-workflows/<YYYYMMDD>-<task-slug>",
   "design_doc": "<design-doc-path>",
+  "refactor_posture": "balanced",
   "execution": {
     "runner": "claude",
     "kiro_agent": "gdim-kiro-opus",
@@ -176,6 +179,7 @@ bash automation/ai-coding/sync-automation.sh "${REFERENCE_DIR}" automation/ai-co
       "depends_on": [],
       "max_rounds": 12,
       "stage": "B",
+      "refactor_posture": "aggressive",
       "runner": "claude",
       "runner_cmd": "",
       "kiro_agent": "gdim-kiro-opus",
@@ -189,6 +193,12 @@ bash automation/ai-coding/sync-automation.sh "${REFERENCE_DIR}" automation/ai-co
   ]
 }
 ```
+
+其中 `refactor_posture` 的语义为：
+
+- `conservative`：优先兼容性；默认不主动引入 breaking change
+- `balanced`：默认档；在设计一致性与兼容性之间平衡
+- `aggressive`：优先设计一致性；允许先落新设计，再围绕新设计修复破坏；若撕裂无法自动愈合，要求输出缺失决策并 BLOCKED
 
 #### 3.2 生成 `00-intent.md`（共享 Intent）
 

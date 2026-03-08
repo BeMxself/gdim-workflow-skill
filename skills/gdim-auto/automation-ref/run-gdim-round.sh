@@ -36,6 +36,7 @@ TASK_DIR=""
 RUNNER_OVERRIDE=""
 RUNNER_CMD_OVERRIDE=""
 KIRO_AGENT_OVERRIDE=""
+REFACTOR_POSTURE=""
 HEARTBEAT_SECONDS_RAW="${GDIM_HEARTBEAT_SECONDS:-20}"
 HEARTBEAT_SECONDS=20
 SKIP_TESTS_RAW="${GDIM_SKIP_TESTS:-0}"
@@ -77,6 +78,7 @@ while [[ $# -gt 0 ]]; do
         --runner|--executor) RUNNER_OVERRIDE="$2"; shift 2 ;;
         --runner-cmd)     RUNNER_CMD_OVERRIDE="$2"; shift 2 ;;
         --kiro-agent)     KIRO_AGENT_OVERRIDE="$2"; shift 2 ;;
+        --refactor-posture) REFACTOR_POSTURE="$2"; shift 2 ;;
         --stall-limit)    STALL_LIMIT_RAW="$2"; shift 2 ;;
         --enforce-round-code-commit) ENFORCE_ROUND_CODE_COMMIT=1; shift ;;
         --no-enforce-round-code-commit) ENFORCE_ROUND_CODE_COMMIT=0; shift ;;
@@ -108,6 +110,15 @@ source "$SCRIPT_DIR/lib/validate.sh"
 source "$SCRIPT_DIR/lib/prompt-builder.sh"
 # shellcheck source=lib/runner.sh
 source "$SCRIPT_DIR/lib/runner.sh"
+
+normalize_refactor_posture() {
+    local posture
+    posture=$(printf "%s" "${1:-balanced}" | tr '[:upper:]' '[:lower:]')
+    case "$posture" in
+        conservative|balanced|aggressive) printf "%s" "$posture" ;;
+        *) printf "%s" "balanced" ;;
+    esac
+}
 
 export CURRENT_FLOW="$FLOW_SLUG"
 export GDIM_SKIP_TESTS="$SKIP_TESTS"
@@ -173,6 +184,20 @@ if [ -z "$KIRO_AGENT" ]; then
         KIRO_AGENT="${GDIM_KIRO_AGENT:-gdim-kiro-opus}"
     fi
 fi
+
+if [ -z "$REFACTOR_POSTURE" ]; then
+    TASK_REFACTOR_POSTURE="$(jq -r '.refactor_posture // empty' "$CONFIG_FILE" 2>/dev/null || true)"
+    FLOW_REFACTOR_POSTURE="$(jq -r --arg slug "$FLOW_SLUG" '.flows[]? | select(.slug == $slug) | .refactor_posture // empty' "$CONFIG_FILE" 2>/dev/null | head -1)"
+    if [ -n "$FLOW_REFACTOR_POSTURE" ]; then
+        REFACTOR_POSTURE="$FLOW_REFACTOR_POSTURE"
+    elif [ -n "$TASK_REFACTOR_POSTURE" ]; then
+        REFACTOR_POSTURE="$TASK_REFACTOR_POSTURE"
+    else
+        REFACTOR_POSTURE="balanced"
+    fi
+fi
+REFACTOR_POSTURE="$(normalize_refactor_posture "$REFACTOR_POSTURE")"
+export GDIM_REFACTOR_POSTURE="$REFACTOR_POSTURE"
 
 # Resolve paths
 WORKFLOW_DIR_ABS="${PROJECT_ROOT}/${WORKFLOW_DIR}"
@@ -847,6 +872,7 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
                 "$local_progress" \
                 "$prev_gap_file" \
                 "$stage_name" \
+                "$REFACTOR_POSTURE" \
                 "$resume_phase")
             log_info "[DRY-RUN] Would send stage=${stage_name} prompt (${#prompt} chars) to runner=${RUNNER}"
             stage_index=$((stage_index + 1))
@@ -892,6 +918,7 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
                 "$local_progress" \
                 "$prev_gap_file" \
                 "$stage_name" \
+                "$REFACTOR_POSTURE" \
                 "$resume_phase")
 
             if [ -n "${TASK_DIR:-}" ]; then
@@ -1153,6 +1180,13 @@ while [ "$round" -le "$MAX_ROUNDS" ]; do
         # Audit: extract gap IDs
         gap_ids=$(grep -oE 'G[1-6]-[0-9]+' "$gap_file" 2>/dev/null | sort -u | tr '\n' ',' || echo "")
         set_round_field "$FLOW_SLUG" "gap_ids" "\"${gap_ids}\""
+
+        if gap_fracture_needs_decision "$gap_file"; then
+            log_warn "Gap analysis reports fracture needing decision; marking BLOCKED"
+            append_round_event "$FLOW_SLUG" "$round" "round_blocked" "reason=fracture_needs_decision"
+            append_progress "$FLOW_SLUG" "R${round}: BLOCKED (fracture needs decision)"
+            exit 1
+        fi
 
         if no_open_gaps "$gap_file"; then
             # Verify at least one commit exists since baseline before accepting closure

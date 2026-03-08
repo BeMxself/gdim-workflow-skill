@@ -16,6 +16,51 @@ _stage_skill_command() {
     esac
 }
 
+_normalize_refactor_posture() {
+    local posture
+    posture=$(printf "%s" "${1:-balanced}" | tr '[:upper:]' '[:lower:]')
+    case "$posture" in
+        conservative|balanced|aggressive) printf "%s" "$posture" ;;
+        *) printf "%s" "balanced" ;;
+    esac
+}
+
+_refactor_posture_upper() {
+    printf "%s" "$(_normalize_refactor_posture "$1")" | tr '[:lower:]' '[:upper:]'
+}
+
+_refactor_posture_discipline() {
+    local posture
+    posture="$(_normalize_refactor_posture "$1")"
+    case "$posture" in
+        conservative)
+            cat <<'EOF'
+- 当前姿态：`conservative`
+- 第一优先级是兼容性与平滑迁移，默认不主动引入 breaking change。
+- 若新设计与旧接口冲突，优先增加适配层、过渡层、废弃标记或迁移说明，而不是直接删除旧入口。
+- 若必须打破兼容性，必须先给出无法兼容的证据、影响边界与补救方案；否则不得视为收敛完成。
+EOF
+            ;;
+        aggressive)
+            cat <<'EOF'
+- 当前姿态：`aggressive`
+- 第一优先级是设计一致性，而不是旧接口兼容性。
+- 允许为了收敛到新设计而做破坏性修改；先确保新设计成为唯一正确实现，再基于新设计修复被破坏的代码。
+- 禁止为了短期通过验证而回退到与新设计冲突的兼容实现。
+- 如果新设计落地后出现无法自动愈合的撕裂，必须详细描述断裂点、影响范围和缺失决策，并提前结束自动迭代，要求用户补充设计决策。
+EOF
+            ;;
+        *)
+            cat <<'EOF'
+- 当前姿态：`balanced`
+- 第一优先级是在设计一致性与兼容性之间取得平衡。
+- 允许局部 breaking change，但必须有明确收益、影响边界和收敛理由，不能无说明地破坏调用方。
+- 若保留兼容层，应确保它不掩盖主设计方向；若删除兼容层，应说明为何值得以及剩余影响如何收敛。
+EOF
+            ;;
+    esac
+}
+
 build_prompt() {
     local template_file="$1"
     local intent_file="$2"
@@ -27,7 +72,8 @@ build_prompt() {
     local progress_file="$8"
     local prev_gaps_file="${9}"
     local stage_name="${10:-scope}"
-    local resume_phase="${11:-}"
+    local refactor_posture="${11:-balanced}"
+    local resume_phase="${12:-}"
 
     if [ ! -f "$template_file" ]; then
         echo "ERROR: Template file not found: $template_file" >&2
@@ -61,6 +107,10 @@ build_prompt() {
     fi
     local stage_cmd
     stage_cmd=$(_stage_skill_command "$stage_name" "$round")
+    local refactor_posture_norm
+    refactor_posture_norm=$(_normalize_refactor_posture "$refactor_posture")
+    local refactor_posture_upper
+    refactor_posture_upper=$(_refactor_posture_upper "$refactor_posture_norm")
     local resume_note="本轮无 phase 断点恢复，按当前阶段正常执行。"
     if [ -n "$resume_phase" ]; then
         resume_note="检测到本轮 phase 断点恢复：已通过阶段不要重做，只补齐当前阶段及后续阶段。"
@@ -137,6 +187,7 @@ build_prompt() {
     local tmp_dir
     tmp_dir=$(mktemp -d)
     echo "$round_task" > "$tmp_dir/task"
+    _refactor_posture_discipline "$refactor_posture_norm" > "$tmp_dir/refactor_discipline"
 
     # Simple sed replacements for single-line values
     output=$(echo "$output" | sed "s|{{FLOW_SLUG}}|${flow_slug}|g")
@@ -146,6 +197,8 @@ build_prompt() {
     output=$(echo "$output" | sed "s|{{MODULES}}|${modules}|g")
     output=$(echo "$output" | sed "s|{{CURRENT_STAGE}}|${stage_name}|g")
     output=$(echo "$output" | sed "s|{{CURRENT_STAGE_CMD}}|${stage_cmd}|g")
+    output=$(echo "$output" | sed "s|{{REFACTOR_POSTURE}}|${refactor_posture_norm}|g")
+    output=$(echo "$output" | sed "s|{{REFACTOR_POSTURE_UPPER}}|${refactor_posture_upper}|g")
     output=$(echo "$output" | sed "s|{{FLOW_INTENT_FILE}}|${flow_intent_file}|g")
     output=$(echo "$output" | sed "s|{{SHARED_INTENT_FILE}}|${shared_intent_file}|g")
     output=$(echo "$output" | sed "s|{{ROUND_SCOPE_FILE}}|${round_scope_file}|g")
@@ -160,10 +213,11 @@ build_prompt() {
 
     # For multiline blocks, use awk
     local result="$output"
-    for placeholder in ROUND_TASK; do
+    for placeholder in ROUND_TASK REFACTOR_DISCIPLINE; do
         local content_file
         case "$placeholder" in
             ROUND_TASK)       content_file="$tmp_dir/task" ;;
+            REFACTOR_DISCIPLINE) content_file="$tmp_dir/refactor_discipline" ;;
         esac
         result=$(awk -v placeholder="{{${placeholder}}}" -v file="$content_file" '
             {

@@ -23,6 +23,9 @@
 - 结论一旦收敛，立即停止继续读取可选输入
 - 信息权重：Intent 与必读输入 > 可选输入；可选输入不得覆盖硬约束
 
+## 重构姿态纪律
+{{REFACTOR_DISCIPLINE}}
+
 ## 本阶段输出文件
 - Design 文件：`{{ROUND_DESIGN_FILE}}`
 
@@ -30,6 +33,7 @@
 - 流程: {{FLOW_SLUG}}
 - 轮次: R{{ROUND}}
 - 阶段: {{CURRENT_STAGE}}
+- 重构姿态: {{REFACTOR_POSTURE}}
 - 设计来源文档（外部输入）: {{DESIGN_SOURCE_FILE}}
 - 工作流目录: {{WORKFLOW_DIR}}
 - 涉及模块: {{MODULES}}

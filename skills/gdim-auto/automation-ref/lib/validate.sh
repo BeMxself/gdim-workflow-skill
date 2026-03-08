@@ -71,6 +71,45 @@ _gap_exit_decision_norm() {
     printf "%s" "$line" | tr '[:upper:]' '[:lower:]'
 }
 
+_gap_explicit_refactor_posture() {
+    local gap_file="$1"
+    awk '
+        BEGIN { IGNORECASE=1; token="" }
+        /^[[:space:]]*GDIM_REFACTOR_POSTURE[[:space:]]*:/ {
+            line=$0
+            sub(/^[[:space:]]*GDIM_REFACTOR_POSTURE[[:space:]]*:[[:space:]]*/, "", line)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+            line=toupper(line)
+            if (line=="CONSERVATIVE" || line=="BALANCED" || line=="AGGRESSIVE") {
+                token=line
+            }
+        }
+        END { if (token != "") print token }
+    ' "$gap_file" 2>/dev/null || true
+}
+
+_gap_explicit_fracture_status() {
+    local gap_file="$1"
+    awk '
+        BEGIN { IGNORECASE=1; token="" }
+        /^[[:space:]]*GDIM_FRACTURE_STATUS[[:space:]]*:/ {
+            line=$0
+            sub(/^[[:space:]]*GDIM_FRACTURE_STATUS[[:space:]]*:[[:space:]]*/, "", line)
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", line)
+            line=toupper(line)
+            if (line=="HEALED" || line=="ACCEPTED" || line=="NEEDS_DECISION") {
+                token=line
+            }
+        }
+        END { if (token != "") print token }
+    ' "$gap_file" 2>/dev/null || true
+}
+
+gap_fracture_needs_decision() {
+    local gap_file="$1"
+    [ "$(_gap_explicit_fracture_status "$gap_file")" = "NEEDS_DECISION" ]
+}
+
 gap_decision_is_final() {
     local gap_file="$1"
     local explicit_decision=""

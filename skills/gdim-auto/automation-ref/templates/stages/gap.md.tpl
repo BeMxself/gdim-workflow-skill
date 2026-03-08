@@ -25,6 +25,9 @@
 - 结论一旦收敛，立即停止继续读取可选输入
 - 信息权重：Intent 与必读输入 > 可选输入；可选输入不得覆盖硬约束
 
+## 重构姿态纪律
+{{REFACTOR_DISCIPLINE}}
+
 ## 本阶段输出文件
 - Gap Analysis 文件：`{{ROUND_GAP_FILE}}`
 
@@ -32,6 +35,7 @@
 - 流程: {{FLOW_SLUG}}
 - 轮次: R{{ROUND}}
 - 阶段: {{CURRENT_STAGE}}
+- 重构姿态: {{REFACTOR_POSTURE}}
 - 设计来源文档（外部输入）: {{DESIGN_SOURCE_FILE}}
 - 工作流目录: {{WORKFLOW_DIR}}
 - 涉及模块: {{MODULES}}
@@ -44,9 +48,17 @@
 - Round Gap 必须给出 Expected/Actual/Category(G1-G6)/Severity/Impact
 - Intent Coverage 必须明确总体覆盖状态，并给出 Closure Strategy
 - Exit Decision 仅在“无 High Severity Gap 且 Intent 覆盖完成”时允许 FINAL_REPORT
+- `conservative` 下，如兼容性被破坏但未提供补偿/迁移闭环，不允许 FINAL_REPORT
+- `balanced` 下，如设计一致性与兼容性仍存在未解释的撕裂，不允许 FINAL_REPORT
+- `aggressive` 下，若新设计落地后仍有无法自动愈合的撕裂，必须停止自动迭代并要求补充设计决策，不允许 FINAL_REPORT
 - 若存在当前任务目录（`{{WORKFLOW_DIR}}` 所属任务目录）之外的代码改动，必须在本会话执行 `git add` + `git commit` 完成提交
 - 提交信息由你生成，且必须包含轮次标记：`gdim({{FLOW_SLUG}}): R{{ROUND}}`
 - 文末必须追加机器可解析决策行（单独一行）：
   - `GDIM_EXIT_DECISION: CONTINUE`
   - `GDIM_EXIT_DECISION: FINAL_REPORT`
   - `GDIM_EXIT_DECISION: BLOCKED`
+- 文末必须追加机器可解析姿态/撕裂状态行（单独一行）：
+  - `GDIM_REFACTOR_POSTURE: {{REFACTOR_POSTURE_UPPER}}`
+  - `GDIM_FRACTURE_STATUS: HEALED`
+  - `GDIM_FRACTURE_STATUS: ACCEPTED`
+  - `GDIM_FRACTURE_STATUS: NEEDS_DECISION`
